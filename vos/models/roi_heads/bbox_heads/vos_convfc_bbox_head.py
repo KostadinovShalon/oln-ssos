@@ -1,8 +1,84 @@
+import torch
+from mmcv.ops import batched_nms
 from mmcv.runner import force_fp32
 
 from mmdet.models import HEADS, Shared2FCBBoxHead
-from mmdet.core import multiclass_nms
 import torch.nn.functional as F
+
+
+def multiclass_nms_with_ood(multi_bboxes,
+                            multi_scores,
+                            multi_ood_scores,
+                            score_thr,
+                            nms_cfg,
+                            max_num=-1,
+                            score_factors=None,
+                            return_inds=False):
+    """NMS for multi-class bboxes.
+
+    Args:
+        multi_bboxes (Tensor): shape (n, #class*4) or (n, 4)
+        multi_scores (Tensor): shape (n, #class), where the last column
+            contains scores of the background class, but this will be ignored.
+        multi_ood_scores (Tensor): shape (n,) OOD scores
+        score_thr (float): bbox threshold, bboxes with scores lower than it
+            will not be considered.
+        nms_thr (float): NMS IoU threshold
+        max_num (int, optional): if there are more than max_num bboxes after
+            NMS, only top max_num will be kept. Default to -1.
+        score_factors (Tensor, optional): The factors multiplied to scores
+            before applying NMS. Default to None.
+        return_inds (bool, optional): Whether return the indices of kept
+            bboxes. Default to False.
+
+    Returns:
+        tuple: (bboxes, labels, indices (optional)), tensors of shape (k, 5),
+            (k), and (k). Labels are 0-based.
+    """
+    num_classes = multi_scores.size(1) - 1
+    # exclude background category
+    if multi_bboxes.shape[1] > 4:
+        bboxes = multi_bboxes.view(multi_scores.size(0), -1, 4)
+    else:
+        bboxes = multi_bboxes[:, None].expand(
+            multi_scores.size(0), num_classes, 4)
+
+    scores = multi_scores[:, :-1]
+    if score_factors is not None:
+        scores = scores * score_factors[:, None]
+
+    labels = torch.arange(num_classes, dtype=torch.long)
+    labels = labels.view(1, -1).expand_as(scores)
+
+    bboxes = bboxes.reshape(-1, 4)
+    scores = scores.reshape(-1)
+    labels = labels.reshape(-1)
+    multi_ood_scores = multi_ood_scores.repeat_interleave(num_classes)
+
+    # remove low scoring boxes
+    valid_mask = scores > score_thr
+    inds = valid_mask.nonzero(as_tuple=False).squeeze(1)
+    bboxes, scores, labels, multi_ood_scores = bboxes[inds], scores[inds], labels[inds], multi_ood_scores[inds]
+    if inds.numel() == 0:
+        if torch.onnx.is_in_onnx_export():
+            raise RuntimeError('[ONNX Error] Can not record NMS '
+                               'as it has not been executed this time')
+        if return_inds:
+            return bboxes, labels, multi_ood_scores, inds
+        else:
+            return bboxes, labels, multi_ood_scores
+
+    # TODO: add size check before feed into batched_nms
+    dets, keep = batched_nms(bboxes, scores, labels, nms_cfg)
+
+    if max_num > 0:
+        dets = dets[:max_num]
+        keep = keep[:max_num]
+
+    if return_inds:
+        return dets, labels[keep], multi_ood_scores[keep], keep
+    else:
+        return dets, labels[keep], multi_ood_scores[keep],
 
 
 @HEADS.register_module()
@@ -88,9 +164,8 @@ class VOSConvFCBBoxHead(Shared2FCBBoxHead):
         if cfg is None:
             return bboxes, scores, ood_scores
         else:
-            det_bboxes, det_labels, inds = multiclass_nms(bboxes, scores,
-                                                          cfg.score_thr, cfg.nms,
-                                                          cfg.max_per_img, return_inds=True)
-            det_ood_scores = ood_scores[inds]
+            det_bboxes, det_labels, det_ood_scores = multiclass_nms_with_ood(bboxes, scores, ood_scores,
+                                                                             cfg.score_thr, cfg.nms,
+                                                                             cfg.max_per_img)
 
             return det_bboxes, det_labels, det_ood_scores

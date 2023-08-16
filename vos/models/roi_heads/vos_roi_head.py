@@ -26,7 +26,7 @@ def bbox2result_ood(bboxes, labels, ood_scores, num_classes):
             bboxes = bboxes.detach().cpu().numpy()
             labels = labels.detach().cpu().numpy()
             ood_scores = ood_scores.detach().cpu().numpy()
-        bboxes_ood = np.hstack((bboxes, ood_scores))
+        bboxes_ood = np.hstack((bboxes, ood_scores[:, None]))
         return [bboxes_ood[labels == i, :] for i in range(num_classes)]
 
 
