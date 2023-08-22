@@ -7,13 +7,14 @@ from mmdet.core import bbox2roi, bbox2result
 from mmdet.models import StandardRoIHead, HEADS
 
 
-def bbox2result_ood(bboxes, labels, ood_scores, num_classes):
+def bbox2result_ood(bboxes, labels, ood_scores, inter_feats, num_classes):
     """Convert detection results to a list of numpy arrays.
 
     Args:
         bboxes (torch.Tensor | np.ndarray): shape (n, 5)
         labels (torch.Tensor | np.ndarray): shape (n, )
         ood_scores (torch.Tensor | np.ndarray): shape (n, )  [1 -> in distribution]
+        inter_feats (torch.Tensor | np.ndarray): shape (n, k + 1)
         num_classes (int): class number, including background class
 
     Returns:
@@ -26,7 +27,9 @@ def bbox2result_ood(bboxes, labels, ood_scores, num_classes):
             bboxes = bboxes.detach().cpu().numpy()
             labels = labels.detach().cpu().numpy()
             ood_scores = ood_scores.detach().cpu().numpy()
-        bboxes_ood = np.hstack((bboxes, ood_scores[:, None]))
+            inter_feats = inter_feats.detach().cpu().numpy()
+        bboxes_ood = np.hstack((bboxes, ood_scores[:, None], inter_feats))
+        # bboxes_ood is now an N x (4 + 1 + 1 + (K + 1)) tensor
         return [bboxes_ood[labels == i, :] for i in range(num_classes)]
 
 
@@ -139,6 +142,13 @@ class VOSRoIHead(StandardRoIHead):
         # VOS STARTS HERE
         ood_loss = self._ood_forward_train(bbox_results, bbox_targets, device=x[0].device)
         loss_bbox["loss_ood"] = self.ood_loss_weight * ood_loss
+        f = torch.nn.MSELoss()
+        loss_dummy = f(self.logistic_regression_layer(torch.zeros(1).cuda()),
+                       self.logistic_regression_layer(torch.zeros(1).cuda()))
+        loss_dummy1 = f(self.weight_energy(torch.zeros(self.bbox_head.num_classes).cuda()),
+                        self.weight_energy(torch.zeros(self.bbox_head.num_classes).cuda()))
+        loss_bbox["loss_dummy"] = loss_dummy
+        loss_bbox["loss_dummy1"] = loss_dummy1
         bbox_results.update(loss_bbox=loss_bbox)
         return bbox_results
 
@@ -249,6 +259,7 @@ class VOSRoIHead(StandardRoIHead):
         cls_score = bbox_results['cls_score']
         bbox_pred = bbox_results['bbox_pred']
         # OOD
+        inter_feats = cls_score  # N x (K + 1)
         energy = self.log_sum_exp(cls_score[:, :-1], 1)
         ood_scores = self.logistic_regression_layer(energy.view(-1, 1))
 
@@ -256,6 +267,7 @@ class VOSRoIHead(StandardRoIHead):
         rois = rois.split(num_proposals_per_img, 0)
         cls_score = cls_score.split(num_proposals_per_img, 0)
         ood_scores = ood_scores.split(num_proposals_per_img, 0)
+        inter_feats = inter_feats.split(num_proposals_per_img, 0)
 
         # some detector with_reg is False, bbox_pred will be None
         if bbox_pred is not None:
@@ -266,19 +278,21 @@ class VOSRoIHead(StandardRoIHead):
                 bbox_pred = self.bbox_head.bbox_pred_split(
                     bbox_pred, num_proposals_per_img)
         else:
-            bbox_pred = (None, ) * len(proposals)
+            bbox_pred = (None,) * len(proposals)
 
         # apply bbox post-processing to each image individually
         det_bboxes = []
         det_labels = []
         det_ood_scores = []
+        det_inter_feats = []
         for i in range(len(proposals)):
-            oods = F.sigmoid(ood_scores[i]) if cls_score is not None else None
-            det_bbox, det_label, _ood_scores = self.bbox_head.get_bboxes(
+            oods = F.sigmoid(ood_scores[i][:, 0]) if cls_score is not None else None
+            det_bbox, det_label, _ood_scores, _inter_feats = self.bbox_head.get_bboxes(
                 rois[i],
                 cls_score[i],
                 bbox_pred[i],
                 oods,
+                inter_feats[i],
                 img_shapes[i],
                 scale_factors[i],
                 rescale=rescale,
@@ -286,7 +300,8 @@ class VOSRoIHead(StandardRoIHead):
             det_bboxes.append(det_bbox)
             det_labels.append(det_label)
             det_ood_scores.append(_ood_scores)
-        return det_bboxes, det_labels, det_ood_scores
+            det_inter_feats.append(_inter_feats)
+        return det_bboxes, det_labels, det_ood_scores, det_inter_feats
 
     def simple_test(self,
                     x,
@@ -297,7 +312,7 @@ class VOSRoIHead(StandardRoIHead):
         """Test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
 
-        det_bboxes, det_labels, det_ood_scores = self.simple_test_bboxes(
+        det_bboxes, det_labels, det_ood_scores, det_inter_feats = self.simple_test_bboxes(
             x, img_metas, proposal_list, self.test_cfg, rescale=rescale)
         # det_ood_scores = self.simple_test_ood(x, proposal_list)
         if torch.onnx.is_in_onnx_export():
@@ -309,7 +324,7 @@ class VOSRoIHead(StandardRoIHead):
                 return det_bboxes, det_labels, det_ood_scores
 
         bbox_results = [
-            bbox2result_ood(det_bboxes[i], det_labels[i], det_ood_scores[i],
+            bbox2result_ood(det_bboxes[i], det_labels[i], det_ood_scores[i], det_inter_feats[i],
                             self.bbox_head.num_classes)
             for i in range(len(det_bboxes))
         ]
@@ -319,4 +334,4 @@ class VOSRoIHead(StandardRoIHead):
         else:
             segm_results = self.simple_test_mask(
                 x, img_metas, det_bboxes, det_labels, rescale=rescale)
-            return list(zip(bbox_results, det_ood_scores, segm_results))
+            return list(zip(bbox_results, segm_results))

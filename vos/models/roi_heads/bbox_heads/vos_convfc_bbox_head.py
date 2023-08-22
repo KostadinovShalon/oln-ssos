@@ -9,6 +9,7 @@ import torch.nn.functional as F
 def multiclass_nms_with_ood(multi_bboxes,
                             multi_scores,
                             multi_ood_scores,
+                            inter_feats,
                             score_thr,
                             nms_cfg,
                             max_num=-1,
@@ -21,6 +22,7 @@ def multiclass_nms_with_ood(multi_bboxes,
         multi_scores (Tensor): shape (n, #class), where the last column
             contains scores of the background class, but this will be ignored.
         multi_ood_scores (Tensor): shape (n,) OOD scores
+        inter_feats (Tensor): shape (n, #class + 1) Class intermediate features
         score_thr (float): bbox threshold, bboxes with scores lower than it
             will not be considered.
         nms_thr (float): NMS IoU threshold
@@ -42,6 +44,8 @@ def multiclass_nms_with_ood(multi_bboxes,
     else:
         bboxes = multi_bboxes[:, None].expand(
             multi_scores.size(0), num_classes, 4)
+    inter_feats = inter_feats[:, None].expand(
+        multi_scores.size(0), num_classes, inter_feats.size(-1))
 
     scores = multi_scores[:, :-1]
     if score_factors is not None:
@@ -54,19 +58,21 @@ def multiclass_nms_with_ood(multi_bboxes,
     scores = scores.reshape(-1)
     labels = labels.reshape(-1)
     multi_ood_scores = multi_ood_scores.repeat_interleave(num_classes)
+    inter_feats = inter_feats.reshape(-1, inter_feats.size(-1))
 
     # remove low scoring boxes
     valid_mask = scores > score_thr
     inds = valid_mask.nonzero(as_tuple=False).squeeze(1)
     bboxes, scores, labels, multi_ood_scores = bboxes[inds], scores[inds], labels[inds], multi_ood_scores[inds]
+    inter_feats = inter_feats[inds]
     if inds.numel() == 0:
         if torch.onnx.is_in_onnx_export():
             raise RuntimeError('[ONNX Error] Can not record NMS '
                                'as it has not been executed this time')
         if return_inds:
-            return bboxes, labels, multi_ood_scores, inds
+            return bboxes, labels, multi_ood_scores, inter_feats, inds
         else:
-            return bboxes, labels, multi_ood_scores
+            return bboxes, labels, multi_ood_scores, inter_feats
 
     # TODO: add size check before feed into batched_nms
     dets, keep = batched_nms(bboxes, scores, labels, nms_cfg)
@@ -76,9 +82,9 @@ def multiclass_nms_with_ood(multi_bboxes,
         keep = keep[:max_num]
 
     if return_inds:
-        return dets, labels[keep], multi_ood_scores[keep], keep
+        return dets, labels[keep], multi_ood_scores[keep], inter_feats[keep], keep
     else:
-        return dets, labels[keep], multi_ood_scores[keep],
+        return dets, labels[keep], multi_ood_scores[keep], inter_feats[keep]
 
 
 @HEADS.register_module()
@@ -99,11 +105,11 @@ class VOSConvFCBBoxHead(Shared2FCBBoxHead):
             for fc in self.shared_fcs:
                 x = self.relu(fc(x))
         # separate branches
-        # x_cls = x
-        # x_reg = x
+        x_cls = x
+        x_reg = x
 
-        cls_score = self.forward_cls_branch(x)
-        bbox_pred = self.forward_bbox_branch(x)
+        cls_score = self.forward_cls_branch(x_cls)
+        bbox_pred = self.forward_bbox_branch(x_reg)
         return cls_score, bbox_pred, x
 
     def forward_cls_branch(self, x_cls):
@@ -136,6 +142,7 @@ class VOSConvFCBBoxHead(Shared2FCBBoxHead):
                    cls_score,
                    bbox_pred,
                    ood_scores,
+                   inter_feats,
                    img_shape,
                    scale_factor,
                    rescale=False,
@@ -162,10 +169,11 @@ class VOSConvFCBBoxHead(Shared2FCBBoxHead):
                           scale_factor).view(bboxes.size()[0], -1)
 
         if cfg is None:
-            return bboxes, scores, ood_scores
+            return bboxes, scores, ood_scores, inter_feats
         else:
-            det_bboxes, det_labels, det_ood_scores = multiclass_nms_with_ood(bboxes, scores, ood_scores,
-                                                                             cfg.score_thr, cfg.nms,
-                                                                             cfg.max_per_img)
+            det_bboxes, det_labels, det_ood_scores, inter_feats = multiclass_nms_with_ood(bboxes, scores, ood_scores,
+                                                                                          inter_feats,
+                                                                                          cfg.score_thr, cfg.nms,
+                                                                                          cfg.max_per_img)
 
-            return det_bboxes, det_labels, det_ood_scores
+            return det_bboxes, det_labels, det_ood_scores, inter_feats

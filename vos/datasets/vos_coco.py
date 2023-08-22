@@ -18,6 +18,7 @@ class VOSCocoDataset(CocoDataset):
                     data['bbox'] = self.xyxy2xywh(bboxes[i])
                     data['score'] = float(bboxes[i][4])
                     data['ood_score'] = float(bboxes[i][5])
+                    data['inter_feats'] = bboxes[i][6:27].tolist()
                     data['category_id'] = self.cat_ids[label]
                     json_results.append(data)
         return json_results
