@@ -1,7 +1,7 @@
 _base_ = [
     '../_base_/models/faster_rcnn_r50_fpn.py',
     '../_base_/datasets/coco_detection.py',
-    '../_base_/schedules/schedule_1x.py', '../_base_/default_runtime.py'
+    '../_base_/default_runtime.py'
 ]
 
 model = dict(
@@ -12,7 +12,7 @@ model = dict(
 
 data_root = 'data/voc0712/'
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=16,
     workers_per_gpu=2,
     train=dict(
         ann_file=data_root + 'voc0712_train_all.json',
