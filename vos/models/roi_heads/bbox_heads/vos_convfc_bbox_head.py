@@ -136,7 +136,7 @@ class VOSConvFCBBoxHead(Shared2FCBBoxHead):
         bbox_pred = self.fc_reg(x_reg) if self.with_reg else None
         return bbox_pred
 
-    @force_fp32(apply_to=('cls_score', 'bbox_pred', 'ood_scores'))
+    @force_fp32(apply_to=('cls_score', 'bbox_pred', 'ood_scores', 'inter_feats'))
     def get_bboxes(self,
                    rois,
                    cls_score,

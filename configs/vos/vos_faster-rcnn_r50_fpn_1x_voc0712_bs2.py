@@ -1,5 +1,5 @@
 _base_ = [
-    '../faster_rcnn/faster-rcnn_r50_fpn_1x_voc0712.py'
+    '../faster_rcnn/faster-rcnn_r50_fpn_1x_voc0712_bs2.py'
 ]
 
 custom_imports = dict(
@@ -28,13 +28,13 @@ train_pipeline = [
     dict(type='DefaultFormatBundle'),
     dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
 ]
-
+scale = 8
 model = dict(
     type='EpochFasterRCNN',
     roi_head=dict(
         type='VOSRoIHead',
         vos_samples_per_class=1000,
-        start_epoch=12,
+        start_epoch=12 * scale,
         logistic_regression_hidden_dim=512,
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
@@ -56,7 +56,7 @@ custom_hooks = [dict(type='SetEpochInfoHook')]
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=500,
+    warmup_iters=500 * scale,
     warmup_ratio=0.001,
-    step=[12, 16])
-total_epochs = 18
+    step=[12 * scale, 16 * scale])
+total_epochs = 18 * scale

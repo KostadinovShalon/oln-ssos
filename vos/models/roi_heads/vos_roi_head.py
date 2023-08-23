@@ -80,6 +80,7 @@ class VOSRoIHead(StandardRoIHead):
                  negative_sampling_size=10000,
                  bottomk_epsilon_dist=1,
                  ood_loss_weight=0.1,
+                 linear_logistic=False,
                  *args,
                  **kwargs):
         """
@@ -102,13 +103,17 @@ class VOSRoIHead(StandardRoIHead):
         self.negative_sampling_size = negative_sampling_size
         self.ood_loss_weight = ood_loss_weight
 
-        self.logistic_regression_layer = nn.Sequential(
-            nn.Linear(1, logistic_regression_hidden_dim),
-            nn.ReLU(),
-            nn.Linear(logistic_regression_hidden_dim, 1)
-        )
+        self.linear_logistic = linear_logistic
+        if linear_logistic:
+            self.logistic_regression_layer = nn.Linear(1, 2)
+        else:
+            self.logistic_regression_layer = nn.Sequential(
+                nn.Linear(1, logistic_regression_hidden_dim),
+                nn.ReLU(),
+                nn.Linear(logistic_regression_hidden_dim, 1)
+            )
 
-        self.weight_energy = nn.Linear(self.bbox_head.num_classes, 1, bias=False)
+        self.weight_energy = nn.Linear(self.bbox_head.num_classes, 1)
         nn.init.uniform_(self.weight_energy.weight)
         self.epoch = 0
 
@@ -143,10 +148,14 @@ class VOSRoIHead(StandardRoIHead):
         ood_loss = self._ood_forward_train(bbox_results, bbox_targets, device=x[0].device)
         loss_bbox["loss_ood"] = self.ood_loss_weight * ood_loss
         f = torch.nn.MSELoss()
-        loss_dummy = f(self.logistic_regression_layer(torch.zeros(1).cuda()),
-                       self.logistic_regression_layer(torch.zeros(1).cuda()))
-        loss_dummy1 = f(self.weight_energy(torch.zeros(self.bbox_head.num_classes).cuda()),
-                        self.weight_energy(torch.zeros(self.bbox_head.num_classes).cuda()))
+        if self.linear_logistic:
+            loss_dummy = f(self.logistic_regression_layer(torch.zeros(1).cuda()), self.logistic_regression_layer.bias)
+            loss_dummy1 = f(self.weight_energy(torch.zeros(self.bbox_head.num_classes).cuda()), self.weight_energy.bias)
+        else:
+            loss_dummy = f(self.logistic_regression_layer(torch.zeros(1).cuda()),
+                           self.logistic_regression_layer(torch.zeros(1).cuda()))
+            loss_dummy1 = f(self.weight_energy(torch.zeros(self.bbox_head.num_classes).cuda()),
+                            self.weight_energy(torch.zeros(self.bbox_head.num_classes).cuda()))
         loss_bbox["loss_dummy"] = loss_dummy
         loss_bbox["loss_dummy1"] = loss_dummy1
         bbox_results.update(loss_bbox=loss_bbox)
@@ -166,7 +175,7 @@ class VOSRoIHead(StandardRoIHead):
             q = self.queue.get_data_tensor()  # K x N x C
             means = torch.mean(q, dim=1)  # K x C
             X = q - means[:, None]  # K x N x C
-            X = torch.cat([_x for _x in X], dim=0)  # KN x C, there could be an easier way to implement this
+            X = X.view(-1, X.size(-1))  # KN x C, there could be an easier way to implement this
 
             cov_mat = torch.mm(X.t(), X) / len(X)  # C x C
             # For stability
@@ -194,8 +203,12 @@ class VOSRoIHead(StandardRoIHead):
                                              torch.zeros(len(ood_samples)).cuda()), -1)
 
                 output = self.logistic_regression_layer(input_for_loss.view(-1, 1))
-                ood_reg_loss = F.binary_cross_entropy_with_logits(
-                    output.view(-1), labels_for_loss)
+                if self.linear_logistic:
+                    criterion = torch.nn.CrossEntropyLoss()  # weight=weights_fg_bg)
+                    ood_reg_loss = criterion(output, labels_for_loss.long())
+                else:
+                    ood_reg_loss = F.binary_cross_entropy_with_logits(
+                        output.view(-1), labels_for_loss)
         return ood_reg_loss
 
     def log_sum_exp(self, value, dim=None, keepdim=False):

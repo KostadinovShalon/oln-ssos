@@ -39,6 +39,7 @@ model = dict(
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
         ood_loss_weight=0.1,
+        linear_logistic=True,
         bbox_head=dict(
             type='VOSConvFCBBoxHead'))
     )
