@@ -81,6 +81,7 @@ class VOSRoIHead(StandardRoIHead):
                  bottomk_epsilon_dist=1,
                  ood_loss_weight=0.1,
                  linear_logistic=False,
+                 use_queue=True,
                  *args,
                  **kwargs):
         """
@@ -117,7 +118,14 @@ class VOSRoIHead(StandardRoIHead):
         nn.init.uniform_(self.weight_energy.weight)
         self.epoch = 0
 
-        self.queue = FeaturesQueue(self.bbox_head.num_classes, self.vos_samples_per_class)
+        self.use_queue = use_queue
+        if use_queue:
+            self.queue = FeaturesQueue(self.bbox_head.num_classes, self.vos_samples_per_class)
+        else:
+            self.data_dict = torch.zeros(self.bbox_head.num_classes, self.vos_samples_per_class, 1024).cuda()
+            self.number_dict = {}
+            for i in range(self.bbox_head.num_classes):
+                self.number_dict[i] = 0
 
     def _bbox_forward(self, x, rois):
         """Box head forward function used in both training and testing."""
@@ -167,29 +175,78 @@ class VOSRoIHead(StandardRoIHead):
         indices_numpy = selected_fg_samples.cpu().numpy().astype(int)
         gt_classes_numpy = bbox_targets[0].cpu().numpy().astype(int)
 
-        self.queue.push_features(bbox_results['shared_bbox_feats'][indices_numpy].detach(),
-                                 gt_classes_numpy[indices_numpy])
+        if self.use_queue:
+            self.queue.push_features(bbox_results['shared_bbox_feats'][indices_numpy].detach(),
+                                     gt_classes_numpy[indices_numpy])
+            queue_ready = self.queue.is_ready
+        else:
+            sum_temp = 0
+            for index in range(self.num_classes):
+                sum_temp += self.number_dict[index]
+            queue_ready = sum_temp >= (n_classes - 1) * self.vos_samples_per_class
+            if not queue_ready:
+                for index in indices_numpy:
+                    dict_key = gt_classes_numpy[index]
+                    if self.number_dict[dict_key] < self.vos_samples_per_class:
+                        self.data_dict[dict_key][self.number_dict[dict_key]] = bbox_results['shared_bbox_feats'][index].detach()
+                        self.number_dict[dict_key] += 1
+            else:
+                for index in indices_numpy:
+                    dict_key = gt_classes_numpy[index]
+                    self.data_dict[dict_key] = torch.cat((self.data_dict[dict_key][1:],
+                                                          bbox_results['shared_bbox_feats'][index].detach().view(1, -1)), 0)
         ood_reg_loss = torch.zeros(1).to(device)
-        if self.queue.is_ready and self.epoch >= self.start_epoch:
+        if queue_ready and self.epoch >= self.start_epoch:
             # Getting means
-            q = self.queue.get_data_tensor()  # K x N x C
-            means = torch.mean(q, dim=1)  # K x C
-            X = q - means[:, None]  # K x N x C
-            X = X.view(-1, X.size(-1))  # KN x C, there could be an easier way to implement this
+            if self.use_queue:
+                q = self.queue.get_data_tensor()  # K x N x C
+                means = torch.mean(q, dim=1)  # K x C
+                X = q - means[:, None]  # K x N x C
+                X = X.view(-1, X.size(-1))  # KN x C, there could be an easier way to implement this
 
-            cov_mat = torch.mm(X.t(), X) / len(X)  # C x C
-            # For stability
-            cov_mat += 1e-4 * torch.eye(self.bbox_head.fc_out_channels, device=device)
+                cov_mat = torch.mm(X.t(), X) / len(X)  # C x C
+                # For stability
+                cov_mat += 1e-4 * torch.eye(self.bbox_head.fc_out_channels, device=device)
 
-            dists = [torch.distributions.multivariate_normal.MultivariateNormal(mean, covariance_matrix=cov_mat)
-                     for mean in means]
+                dists = [torch.distributions.multivariate_normal.MultivariateNormal(mean, covariance_matrix=cov_mat)
+                         for mean in means]
 
-            negative_samples = [dist.rsample((self.negative_sampling_size,)) for dist in dists]
-            prob_density = [dist.log_prob(neg_sample) for dist, neg_sample in zip(dists, negative_samples)]
+                negative_samples = [dist.rsample((self.negative_sampling_size,)) for dist in dists]
+                prob_density = [dist.log_prob(neg_sample) for dist, neg_sample in zip(dists, negative_samples)]
 
-            indices_prob = [torch.topk(- p, self.bottomk_epsilon_dist)[1] for p in prob_density]
-            ood_samples = [neg_sample[index] for neg_sample, index in zip(negative_samples, indices_prob)]
-            ood_samples = torch.cat(ood_samples, dim=0)  # N x C
+                indices_prob = [torch.topk(- p, self.bottomk_epsilon_dist)[1] for p in prob_density]
+                ood_samples = [neg_sample[index] for neg_sample, index in zip(negative_samples, indices_prob)]
+                ood_samples = torch.cat(ood_samples, dim=0)  # N x C
+            else:
+                # the covariance finder needs the data to be centered.
+                for index in range(n_classes - 1):
+                    if index == 0:
+                        X = self.data_dict[index] - self.data_dict[index].mean(0)
+                        mean_embed_id = self.data_dict[index].mean(0).view(1, -1)
+                    else:
+                        X = torch.cat((X, self.data_dict[index] - self.data_dict[index].mean(0)), 0)
+                        mean_embed_id = torch.cat((mean_embed_id,
+                                                   self.data_dict[index].mean(0).view(1, -1)), 0)
+
+                # add the variance.
+                temp_precision = torch.mm(X.t(), X) / len(X)
+                # for stable training.
+                temp_precision += 0.0001 * self.eye_matrix
+
+                for index in range(n_classes - 1):
+                    new_dis = torch.distributions.multivariate_normal.MultivariateNormal(
+                        mean_embed_id[index], covariance_matrix=temp_precision)
+                    negative_samples = new_dis.rsample((self.negative_sampling_size,))
+                    prob_density = new_dis.log_prob(negative_samples)
+
+                    # keep the data in the low density area.
+                    cur_samples, index_prob = torch.topk(- prob_density, self.bottomk_epsilon_dist)
+                    if index == 0:
+                        ood_samples = negative_samples[index_prob]
+                    else:
+                        ood_samples = torch.cat((ood_samples, negative_samples[index_prob]), 0)
+                    del new_dis
+                    del negative_samples
 
             if len(ood_samples) > 0:
                 energy_score_for_fg = self.log_sum_exp(bbox_results['cls_score'][selected_fg_samples][:, :-1], 1)
