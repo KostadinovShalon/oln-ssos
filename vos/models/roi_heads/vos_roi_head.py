@@ -181,7 +181,7 @@ class VOSRoIHead(StandardRoIHead):
             queue_ready = self.queue.is_ready
         else:
             sum_temp = 0
-            for index in range(self.num_classes):
+            for index in range(self.bbox_head.num_classes):
                 sum_temp += self.number_dict[index]
             queue_ready = sum_temp >= (n_classes - 1) * self.vos_samples_per_class
             if not queue_ready:
