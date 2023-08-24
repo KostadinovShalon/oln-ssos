@@ -6,9 +6,7 @@ model = dict(
         norm_cfg=dict(requires_grad=False),
         norm_eval=True,
         style='caffe',
-        init_cfg=dict(
-            type='Pretrained',
-            checkpoint='open-mmlab://detectron2/resnet50_caffe')))
+        pretrained='open-mmlab://detectron2/resnet50_caffe'))
 
 custom_imports = dict(
     imports=[
