@@ -265,7 +265,8 @@ class VOSRoIHead(StandardRoIHead):
                     ood_reg_loss = criterion(output, labels_for_loss.long())
                 else:
                     ood_reg_loss = F.binary_cross_entropy_with_logits(
-                        output.view(-1), labels_for_loss)
+                        output.view(-1), labels_for_loss,
+                        pos_weight=torch.tensor(len(ood_samples)/len(selected_fg_samples)).cuda())
         return ood_reg_loss
 
     def log_sum_exp(self, value, dim=None, keepdim=False):
@@ -330,7 +331,7 @@ class VOSRoIHead(StandardRoIHead):
         bbox_pred = bbox_results['bbox_pred']
         # OOD
         inter_feats = cls_score  # N x (K + 1)
-        energy = self.log_sum_exp(cls_score[:, :-1], 1)
+        energy = torch.logsumexp(cls_score[:, :-1], 1)
         ood_scores = self.logistic_regression_layer(energy.view(-1, 1))
 
         num_proposals_per_img = tuple(len(p) for p in proposals)
