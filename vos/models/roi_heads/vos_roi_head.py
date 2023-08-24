@@ -231,7 +231,7 @@ class VOSRoIHead(StandardRoIHead):
                 # add the variance.
                 temp_precision = torch.mm(X.t(), X) / len(X)
                 # for stable training.
-                temp_precision += 0.0001 * self.eye_matrix
+                temp_precision += 0.0001 * torch.eye(self.bbox_head.fc_out_channels, device=device)
 
                 for index in range(n_classes - 1):
                     new_dis = torch.distributions.multivariate_normal.MultivariateNormal(
