@@ -2,11 +2,12 @@ _base_ = [
     './vos_faster-rcnn_r50_fpn_1x_voc0712.py'
 ]
 model = dict(
+
+    pretrained='open-mmlab://detectron2/resnet50_caffe',
     backbone=dict(
         norm_cfg=dict(requires_grad=False),
         norm_eval=True,
-        style='caffe',
-        pretrained='open-mmlab://detectron2/resnet50_caffe'))
+        style='caffe',))
 
 custom_imports = dict(
     imports=[
