@@ -1,5 +1,5 @@
 _base_ = [
-    './vos_faster-rcnn_r50_fpn_1x_voc0712.py'
+    './vos_faster-rcnn_r50_fpn_1x_voc0712_noqueue.py'
 ]
 model = dict(
 

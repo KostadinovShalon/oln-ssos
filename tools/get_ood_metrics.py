@@ -3,9 +3,14 @@ import json
 
 import numpy as np
 import torch
+from mmcv import Config
+from mmcv.cnn import fuse_conv_bn
+from mmcv.runner import wrap_fp16_model, load_checkpoint
 from pycocotools.coco import COCO
 from pycocotools.cocoeval import COCOeval
+import torch.nn.functional as F
 
+from mmdet.models import build_detector
 from vos.utils.metrics import get_measures, print_measures
 
 
@@ -15,6 +20,9 @@ def parse_args():
     parser.add_argument('id_gt', help='In-distribution ground truth coco json file')
     parser.add_argument('id_results', help='In-distribution results json file')
     parser.add_argument('ood_results', help='Out-of-distribution results json file')
+
+    parser.add_argument('--cfg')
+    parser.add_argument('--checkpoint')
     parser.add_argument('--optimal-score', type=float, default=-1)
     parser.add_argument('--tpr-thres', help='TPR in-distribution rate for threshold calculation',
                         type=float, default=0.95)
@@ -28,6 +36,20 @@ def main(args):
 
     optimal_score_threshold = args.optimal_score
 
+    if args.cfg is not None and args.checkpoint is not None:
+        cfg = Config.fromfile(args.cfg)
+        cfg.model.train_cfg = None
+        model = build_detector(cfg.model, test_cfg=cfg.get('test_cfg'))
+        fp16_cfg = cfg.get('fp16', None)
+        if fp16_cfg is not None:
+            wrap_fp16_model(model)
+        checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+        # old versions did not save class info in checkpoints, this walkaround is
+        # for backward compatibility
+        if 'CLASSES' in checkpoint['meta']:
+            model.CLASSES = checkpoint['meta']['CLASSES']
+    else:
+        model = None
     if optimal_score_threshold < 0:
 
         gt_coco_api = COCO(args.id_gt)
@@ -65,10 +87,6 @@ def main(args):
     ood_inter_feats = torch.logsumexp(torch.stack(ood_inter_feats)[:, :-1], dim=1).sigmoid().cpu().data.numpy()
     ood_scores = [ood_r['ood_score'] for ood_r in ood_results if ood_r['score'] > optimal_score_threshold]
 
-    id_scores.sort()
-    t = int(len(id_scores) * (1 - args.tpr_thres))-1
-    sc_th = id_scores[t]
-
     print(len(id_scores))
     print(len(ood_scores))
     print(f"Mean OOD score for the ID dataset: {sum(id_scores) / len(id_scores)}")
@@ -76,24 +94,11 @@ def main(args):
     print(f"Median OOD score for the ID dataset: {id_scores[len(id_scores)//2]}")
     print(f"Median OOD score for the OOD dataset: {ood_scores[len(ood_scores)//2]}")
 
-    tpr = sum([1 for s in id_scores if s > sc_th]) / len(id_scores)
-    fpr = sum([1 for s in ood_scores if s > sc_th]) / len(ood_scores)
-
-    print(f"TPR in the ID dataset: {tpr}")
-    print(f"FPR in the OOD dataset: {fpr}")
-
-    id_inter_feats.sort()
-    t = int(len(id_inter_feats) * (1 - args.tpr_thres)) - 1
-    sc_th = id_inter_feats[t]
-
-    tpr = len(id_inter_feats[id_inter_feats > sc_th]) / len(id_inter_feats)
-    fpr = len(ood_inter_feats[ood_inter_feats > sc_th]) / len(ood_inter_feats)
-
-    print(f"TPR in the ID dataset, v2: {tpr}")
-    print(f"FPR in the OOD dataset, v2: {fpr}")
+    measures = get_measures(id_scores, ood_scores)
+    print_measures(*measures, method_name='Metrics with Weights')
 
     measures = get_measures(id_inter_feats, ood_inter_feats)
-    print_measures(*measures, method_name='BBB')
+    print_measures(*measures, method_name='Metrics without Weights')
 
 
 if __name__ == '__main__':
