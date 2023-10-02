@@ -26,7 +26,7 @@ data = dict(
                  'annotations/instancesonly_filtered_gtFine_val.json',
         img_prefix=data_root))
 
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
 
 lr_config = dict(
