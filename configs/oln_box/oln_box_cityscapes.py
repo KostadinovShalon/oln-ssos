@@ -33,18 +33,15 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=16,
     workers_per_gpu=2,
     train=dict(
-        type='RepeatDataset',
-        times=8,
-        dataset=dict(
             type=dataset_type,
             is_class_agnostic=True,
             ann_file=data_root +
                      'annotations/instancesonly_filtered_gtFine_train.json',
             img_prefix=data_root,
-            pipeline=train_pipeline)),
+            pipeline=train_pipeline),
     val=dict(
         type=dataset_type,
         is_class_agnostic=True,
@@ -60,7 +57,7 @@ data = dict(
         img_prefix=data_root,
         pipeline=test_pipeline))
 
-optimizer = dict(type='SGD', lr=0.0025, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
 
 lr_config = dict(
