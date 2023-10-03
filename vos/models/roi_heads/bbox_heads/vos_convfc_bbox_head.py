@@ -44,8 +44,9 @@ def multiclass_nms_with_ood(multi_bboxes,
     else:
         bboxes = multi_bboxes[:, None].expand(
             multi_scores.size(0), num_classes, 4)
-    inter_feats = inter_feats[:, None].expand(
-        multi_scores.size(0), num_classes, inter_feats.size(-1))
+    if inter_feats is not None:
+        inter_feats = inter_feats[:, None].expand(
+            multi_scores.size(0), num_classes, inter_feats.size(-1))
 
     scores = multi_scores[:, :-1]
     if score_factors is not None:
@@ -58,13 +59,15 @@ def multiclass_nms_with_ood(multi_bboxes,
     scores = scores.reshape(-1)
     labels = labels.reshape(-1)
     multi_ood_scores = multi_ood_scores.repeat_interleave(num_classes)
-    inter_feats = inter_feats.reshape(-1, inter_feats.size(-1))
+    if inter_feats is not None:
+        inter_feats = inter_feats.reshape(-1, inter_feats.size(-1))
 
     # remove low scoring boxes
     valid_mask = scores > score_thr
     inds = valid_mask.nonzero(as_tuple=False).squeeze(1)
     bboxes, scores, labels, multi_ood_scores = bboxes[inds], scores[inds], labels[inds], multi_ood_scores[inds]
-    inter_feats = inter_feats[inds]
+    if inter_feats is not None:
+        inter_feats = inter_feats[inds]
     if inds.numel() == 0:
         if torch.onnx.is_in_onnx_export():
             raise RuntimeError('[ONNX Error] Can not record NMS '
@@ -81,10 +84,13 @@ def multiclass_nms_with_ood(multi_bboxes,
         dets = dets[:max_num]
         keep = keep[:max_num]
 
+    if inter_feats is not None:
+        inter_feats = inter_feats[keep]
+
     if return_inds:
-        return dets, labels[keep], multi_ood_scores[keep], inter_feats[keep], keep
+        return dets, labels[keep], multi_ood_scores[keep], inter_feats, keep
     else:
-        return dets, labels[keep], multi_ood_scores[keep], inter_feats[keep]
+        return dets, labels[keep], multi_ood_scores[keep], inter_feats
 
 
 @HEADS.register_module()
