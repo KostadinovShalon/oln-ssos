@@ -18,7 +18,8 @@ model = dict(
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
         ood_loss_weight=0.1,
-        k=5,
+        k=10,
+        repeat_ood_sampling=2,
         bbox_head=dict(
             type='VOSShared2FCBBoxScoreHead'))
     )
@@ -37,4 +38,4 @@ data = dict(
 
 custom_hooks = [dict(type='SetEpochInfoHook')]
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
-work_dir = './work_dirs/oln_vos_box_cityscapes/'
+work_dir = './work_dirs/oln_vos_box_cityscapes_kmeans_10/'
