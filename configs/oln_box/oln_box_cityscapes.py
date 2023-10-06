@@ -44,19 +44,22 @@ data = dict(
             is_class_agnostic=True,
             ann_file=data_root +
                      'annotations/instancesonly_filtered_gtFine_train.json',
-            img_prefix=data_root)),
+            img_prefix=data_root,
+            pipeline=train_pipeline)),
     val=dict(
         type=dataset_type,
         is_class_agnostic=True,
         ann_file=data_root +
                  'annotations/instancesonly_filtered_gtFine_val.json',
-        img_prefix=data_root),
+        img_prefix=data_root,
+        pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
         is_class_agnostic=True,
         ann_file=data_root +
                  'annotations/instancesonly_filtered_gtFine_val.json',
-        img_prefix=data_root))
+        img_prefix=data_root,
+        pipeline=test_pipeline))
 
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
