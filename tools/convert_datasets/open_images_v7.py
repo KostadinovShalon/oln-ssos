@@ -97,7 +97,7 @@ if 'images' not in data.keys():
         images.append(image)
         img_counter += 1
     data['images'] = images
-    json.dump(data, open(os.path.join(args.root_dir, 'annotations', f'images_{p}_first_stage.json')))
+    json.dump(data, open(os.path.join(args.root_dir, 'annotations', f'images_{p}_first_stage.json'), 'w'))
 
 
 categories_df = pd.read_csv(categoires_path)
