@@ -74,7 +74,7 @@ if preloaded_file is not None:
 
 if 'images' not in data.keys():
     image_labels = pd.read_csv(label_file_paths[p])
-    for index, img in tqdm.tqdm(image_labels.iterrows()):
+    for index, img in tqdm.tqdm(image_labels.iterrows(), desc='Reading Images File', total=len(image_labels)):
         img_id = img['ImageID']
         if p == 'train':
             first_letter = img_id[0]
@@ -205,14 +205,13 @@ else:
     #     ann_counter += 1
     #     anns.append(ann)
 
-# if 'info' not in data.keys():
-#     data['info'] = info
-# if 'images' not in data.keys():
-#     data['images'] = images
-# data['annotations'] = anns
-# name = f'instances_{p}.json' if args.mode == 'segm' else f'detection_{p}.json'
-# out_file = os.path.join(args.root_dir, name)
-# print("Writing resulting coco file to: {}")
-# json.dump(data, open(out_file, 'w'))
-# root_dir = '/home/brian/Documents/datasets/openimages/masks/train/'
-#
+if 'info' not in data.keys():
+    data['info'] = info
+if 'images' not in data.keys():
+    data['images'] = images
+data['annotations'] = anns
+name = f'instances_{p}.json' if args.mode == 'segm' else f'detection_{p}.json'
+out_file = os.path.join(args.root_dir, name)
+print(f"Writing resulting coco file to: {out_file}")
+json.dump(data, open(out_file, 'w'))
+
