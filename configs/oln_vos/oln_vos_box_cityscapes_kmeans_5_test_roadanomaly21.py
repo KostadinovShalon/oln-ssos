@@ -24,7 +24,7 @@ model = dict(
     )
 
 dataset_type = "VOSCocoSplitDataset"
-data_root = '/home/brian/Documents/datasets/RoadAnomaly_jpg/'
+data_root = 'data/roadanomaly21/'
 data = dict(
     samples_per_gpu=16,
     workers_per_gpu=2,
@@ -36,7 +36,7 @@ data = dict(
         type=dataset_type,
         ann_file=data_root +
                  'instances.json',
-        img_prefix=data_root + 'frames/')
+        img_prefix=data_root + 'images/')
 )
 
 custom_hooks = [dict(type='SetEpochInfoHook')]

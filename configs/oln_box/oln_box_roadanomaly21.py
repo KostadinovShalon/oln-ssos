@@ -2,7 +2,7 @@ _base_ = './oln_box.py'
 
 # Dataset
 dataset_type = 'CocoSplitDataset'
-data_root = 'data/cityscapes/'
+data_root = 'data/roadanomaly21/'
 
 data = dict(
     samples_per_gpu=16,
@@ -17,14 +17,14 @@ data = dict(
         type=dataset_type,
         is_class_agnostic=True,
         ann_file=data_root +
-                 'annotations/instancesonly_filtered_gtFine_val.json',
-        img_prefix=data_root),
+                 'instances.json',
+        img_prefix=data_root + "images/"),
     test=dict(
         type=dataset_type,
         is_class_agnostic=True,
         ann_file=data_root +
-                 'annotations/instancesonly_filtered_gtFine_val.json',
-        img_prefix=data_root))
+                 'instances.json',
+        img_prefix=data_root + "images/"))
 
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
