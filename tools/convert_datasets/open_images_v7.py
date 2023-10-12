@@ -72,6 +72,9 @@ data = {}
 if preloaded_file is not None:
     data = json.load(open(preloaded_file, 'r'))
 
+if 'info' not in data.keys():
+    data['info'] = info
+
 if 'images' not in data.keys():
     image_labels = pd.read_csv(label_file_paths[p])
     for index, img in tqdm.tqdm(image_labels.iterrows(), desc='Reading Images File', total=len(image_labels)):
@@ -93,7 +96,9 @@ if 'images' not in data.keys():
         }
         images.append(image)
         img_counter += 1
-    data['images'] = 'images'
+    data['images'] = images
+    json.dump(data, open(os.path.join(args.root_dir, 'annotations', f'images_{p}_first_stage.json')))
+
 
 categories_df = pd.read_csv(categoires_path)
 cats_oi_dict = {}
@@ -125,10 +130,11 @@ if args.mode == 'box':
         print('Loading Annotations')
         anns = json.load(open(preloaded_bboxes_json, 'r'))
     else:
+        print("Reading annotations")
         image_boxes_anns = pd.read_csv(boxes_file_paths[p])
-        image_numeric_ids = image_boxes_anns['ImageID'].map(lambda x: images_id_dict[x][0])
-        image_widths = image_boxes_anns['ImageID'].map(lambda x: images_id_dict[x][1])
-        image_heights = image_boxes_anns['ImageID'].map(lambda x: images_id_dict[x][2])
+        image_numeric_ids = image_boxes_anns['ImageID'].progress_map(lambda x: images_id_dict[x][0])
+        image_widths = image_boxes_anns['ImageID'].progress_map(lambda x: images_id_dict[x][1])
+        image_heights = image_boxes_anns['ImageID'].progress_map(lambda x: images_id_dict[x][2])
         x1 = image_boxes_anns['XMin'] * image_widths
         x2 = image_boxes_anns['XMax'] * image_widths
         y1 = image_boxes_anns['YMin'] * image_heights
@@ -136,7 +142,7 @@ if args.mode == 'box':
         w = x2 - x1
         h = y2 - y1
         area = w * h
-        category_ids = image_boxes_anns['LabelName'].map(lambda x: cats_oi_dict[x])
+        category_ids = image_boxes_anns['LabelName'].progress_map(lambda x: cats_oi_dict[x])
         anns = pd.DataFrame({
             "id": pd.Series(range(1, len(image_boxes_anns) + 1)),
             "image_id": image_numeric_ids,
@@ -149,8 +155,10 @@ if args.mode == 'box':
             "h": h,
         })
         bboxes_json_path = os.path.join(args.root_dir, 'annotations', f'bboxes_{p}_first_stage.json')
+        print("Writing bboxes json, first stage")
         anns.to_json(bboxes_json_path, orient='records')
         del image_boxes_anns, image_widths, image_numeric_ids, image_heights, x1, x2, y1, y2, w, h, category_ids, anns, area
+        print("Loading annotations after freeing-up memory")
         anns = json.load(open(bboxes_json_path, 'r'))
     for ann in tqdm.tqdm(anns, desc="Formatting BBoxes"):
         ann['bbox'] = [ann['x1'], ann['y1'], ann['w'], ann['h']]
@@ -205,8 +213,6 @@ else:
     #     ann_counter += 1
     #     anns.append(ann)
 
-if 'info' not in data.keys():
-    data['info'] = info
 if 'images' not in data.keys():
     data['images'] = images
 data['annotations'] = anns
