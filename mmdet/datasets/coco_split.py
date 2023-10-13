@@ -392,13 +392,6 @@ class CocoSplitDataset(CocoDataset):
 @DATASETS.register_module()
 class OI7CocoSplitDataset(CocoSplitDataset):
 
-    def __init__(self, **kwargs):
-        # We convert all category IDs into 1 for the class-agnostic training and
-        # evaluation. We train on train_class and evaluate on eval_class split.
-        super(OI7CocoSplitDataset, self).__init__(is_class_agonistic=True,
-                                                  train_class='all',
-                                                  eval_class='all', **kwargs)
-
     CLASSES = ('Accordion', 'Adhesive tape', 'Aircraft', 'Alarm clock', 'Alpaca', 'Ambulance', 'Animal', 'Ant',
                'Antelope', 'Apple', 'Armadillo', 'Artichoke', 'Auto part', 'Axe', 'Backpack', 'Bagel', 'Baked goods',
                'Balance beam', 'Ball (Object)', 'Balloon', 'Banana', 'Band-aid', 'Banjo', 'Barge', 'Barrel',
