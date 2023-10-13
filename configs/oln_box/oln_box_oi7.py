@@ -33,7 +33,7 @@ test_pipeline = [
 ]
 
 data = dict(
-    samples_per_gpu=48,
+    samples_per_gpu=56,
     workers_per_gpu=2,
     train=dict(
         is_class_agnostic=True,
@@ -61,7 +61,7 @@ data = dict(
         img_prefix=data_root + 'images/test/',
         pipeline=test_pipeline))
 
-optimizer = dict(type='SGD', lr=0.06, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.07, momentum=0.9, weight_decay=0.0001)
 optimizer_config = dict(grad_clip=None)
 
 lr_config = dict(
