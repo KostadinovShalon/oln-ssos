@@ -90,9 +90,7 @@ if 'images' not in data.keys():
             "id": img_counter,
             "width": w,
             "height": h,
-            "file_name": f'{img_id}.jpg',
-            'license': img['License'],
-            'flickr_url': img['OriginalLandingURL'],
+            "file_name": f'{img_id}.jpg'
         }
         images.append(image)
         img_counter += 1

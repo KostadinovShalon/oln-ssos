@@ -5,7 +5,7 @@ Reference:
         Aug 2021. https://arxiv.org/abs/2108.06753
         Dahun Kim, Tsung-Yi Lin, Anelia Angelova, In So Kweon and Weicheng Kuo
 """
-
+import numpy as np
 import torch
 
 from mmdet.core import bbox2roi
@@ -122,6 +122,24 @@ class MaskScoringOlnRoIHead(OlnRoIHead):
         assert mask_iou_head is not None
         super(MaskScoringOlnRoIHead, self).__init__(**kwargs)
         self.mask_iou_head = build_head(mask_iou_head)
+
+
+    def simple_test(self,
+                    x,
+                    proposal_list,
+                    img_metas,
+                    proposals=None,
+                    rescale=False):
+        results = super().simple_test(x, proposal_list, img_metas, proposals, rescale)
+        for bbox_results, segm_results in results:
+            masks, mask_score = segm_results
+            for b, ms in zip(bbox_results, mask_score):
+                if len(b) == 0:
+                    continue
+                bbox_score = b[:, 4]
+                geometric_mask_score = np.cbrt((bbox_score ** 2) * ms)
+                b[:, 4] = geometric_mask_score
+        return results
 
     def _mask_forward(self, x, rois=None, pos_inds=None, bbox_feats=None):
         """Mask head forward function used in both training and testing."""

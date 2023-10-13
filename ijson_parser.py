@@ -4,8 +4,8 @@ import ijson
 
 
 file = '/home/brian/Documents/datasets/openimages/detection_train.json'
-
 def load_images(json_filename):
+    counter = 0
     images = []
     annotations = []
     categories = []
@@ -44,6 +44,9 @@ def load_images(json_filename):
                 loading_categories = True
                 continue
             if loading_images:
+                if counter > 100:
+                    counter = 0
+                    loading_images = False
                 all_are_not_none = all(v is not None for v in current_img.values())
                 if all_are_not_none:
                     images.append(current_img)
@@ -54,6 +57,7 @@ def load_images(json_filename):
                         "height": None,
                         "file_name": None
                     }
+                    counter += 1
                 else:
                     if event == 'number' and prefix == 'images.item.id':
                         current_img['id'] = int(value)
@@ -62,7 +66,8 @@ def load_images(json_filename):
                     elif event == 'number' and prefix == 'images.item.height':
                         current_img['height'] = int(value)
                     elif event == 'string' and prefix == 'images.item.file_name':
-                        current_img['file_name'] = value
+                        first_letter = value[0]
+                        current_img['file_name'] = f'train_{first_letter}/{value}'
                 if prefix == 'images' and event == 'end_array':
                     loading_images = False
 
@@ -84,6 +89,7 @@ def load_images(json_filename):
                         "category_id": None,
                         "bbox": list()
                     }
+                    counter += 1
                 else:
                     if event == 'number' and prefix == 'annotations.item.id':
                         current_ann['id'] = int(value)
@@ -99,6 +105,8 @@ def load_images(json_filename):
                         current_ann['bbox'].append(int(value))
                 if prefix == 'annotations' and event == 'end_array':
                     loading_annotations = False
+                if counter > 100:
+                    break
             if loading_categories:
                 ready = current_category['id'] is not None and \
                         current_category['name'] is not None
