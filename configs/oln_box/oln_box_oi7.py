@@ -37,19 +37,19 @@ data = dict(
     workers_per_gpu=0,
     train=dict(
         type=dataset_type,
-        img_prefix=data_root + 'images',
+        img_prefix=data_root + 'images/train/',
         pipeline=train_pipeline,
-        ann_file=data_root + 'annotations/detection_train.json',
+        ann_file=data_root + 'annotations/detection_train_curated.json',
     ),
     val=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/detection_validation.json',
-        img_prefix=data_root + 'images',
+        img_prefix=data_root + 'images/validation/',
         pipeline=test_pipeline),
     test=dict(
         type=dataset_type,
         ann_file=data_root + 'annotations/detection_test.json',
-        img_prefix=data_root + 'images',
+        img_prefix=data_root + 'images/test/',
         pipeline=test_pipeline))
 
 optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
