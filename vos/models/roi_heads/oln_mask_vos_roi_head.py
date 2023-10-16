@@ -4,7 +4,7 @@ import torch
 from mmdet.models.roi_heads.oln_roi_head import MaskScoringOlnRoIHead
 
 from vos.models.roi_heads.oln_vos_roi_head import OLNKMeansVOSRoIHead
-from vos.models.roi_heads.vos_roi_head import bbox2result_ood
+from vos.models.roi_heads.oln_vos_roi_head import bbox2result_ood
 from mmdet.models import HEADS
 
 
