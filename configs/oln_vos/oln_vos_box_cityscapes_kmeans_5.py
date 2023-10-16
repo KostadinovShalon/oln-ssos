@@ -37,7 +37,7 @@ data = dict(
     samples_per_gpu=16,
     workers_per_gpu=2,
     train=dict(
-        type=dataset_type),
+        dataset=dict(type=dataset_type)),
     val=dict(
         type=dataset_type),
     test=dict(
