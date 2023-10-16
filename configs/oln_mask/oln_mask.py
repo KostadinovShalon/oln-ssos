@@ -89,7 +89,7 @@ model = dict(
             conv_out_channels=256,
             fc_out_channels=1024,
             num_classes=1,
-            loss_iou=dict(type='SmoothL1Loss', loss_weight=1.0))),
+            loss_iou=dict(type='L1Loss', loss_weight=1.0))),
     # model training and testing settings
     train_cfg=dict(
         rpn=dict(

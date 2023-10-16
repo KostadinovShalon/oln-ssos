@@ -221,7 +221,7 @@ class MaskScoringOlnRoIHead(OlnRoIHead):
             mask_results = self._mask_forward(x, mask_rois)
             concat_det_labels = torch.cat(det_labels)
             # get mask scores with mask iou head
-            mask_feats = mask_results['mask_feats']
+            mask_feats = mask_results['mask_fcn_out']
             mask_pred = mask_results['mask_pred']
             mask_iou_pred = self.mask_iou_head(
                 mask_feats, mask_pred[range(concat_det_labels.size(0)),

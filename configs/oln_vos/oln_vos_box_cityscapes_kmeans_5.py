@@ -13,7 +13,7 @@ model = dict(
     type='EpochFasterRCNN',
     roi_head=dict(
         type='OLNKMeansVOSRoIHead',
-        start_epoch=4,
+        start_epoch=0,
         logistic_regression_hidden_dim=512,
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
@@ -22,10 +22,19 @@ model = dict(
         bbox_head=dict(
             type='VOSShared2FCBBoxScoreHead'))
     )
-
+checkpoint_config = dict(interval=1)
 dataset_type = "VOSCocoSplitDataset"
+
+lr_config = dict(
+    policy='step',
+    warmup='linear',
+    warmup_iters=500,
+    warmup_ratio=0.001,
+    step=[4])
+total_epochs = 5
+
 data = dict(
-    samples_per_gpu=2,
+    samples_per_gpu=16,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type),
@@ -36,5 +45,7 @@ data = dict(
 )
 
 custom_hooks = [dict(type='SetEpochInfoHook')]
-optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0001)
+# Pretrained on COCO
+load_from = './work_dirs/oln_box/epoch_8.pth'
 work_dir = './work_dirs/oln_vos_box_cityscapes_kmeans_5/'
