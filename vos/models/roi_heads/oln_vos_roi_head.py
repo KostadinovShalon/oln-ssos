@@ -110,7 +110,8 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
         # FEATS ARE CHANGED HERE
         bbox_results = dict(
-            cls_score=cls_score, bbox_pred=bbox_pred, bbox_score=bbox_score, shared_bbox_feats=fts)
+            cls_score=cls_score, bbox_pred=bbox_pred, bbox_score=bbox_score, shared_bbox_feats=fts,
+            bbox_feats=bbox_feats)
         return bbox_results
 
     def _bbox_forward_train(self, x, sampling_results, gt_bboxes, gt_labels,
