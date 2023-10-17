@@ -160,7 +160,7 @@ checkpoint_config = dict(interval=1)
 dataset_type = "VOSCocoSplitDataset"
 
 
-data_root = 'data/coco/'
+data_root = 'data/voc0712/'
 img_norm_cfg = dict(
     mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
 train_pipeline = [
@@ -203,19 +203,27 @@ data = dict(
         eval_class='all',
         type=dataset_type,
         pipeline=train_pipeline,
+        ann_file=data_root + 'voc0712_train_all.json',
+        img_prefix=data_root + 'JPEGImages/',
         ),
     val=dict(
         is_class_agnostic=True,
         train_class='all',
         eval_class='all',
         type=dataset_type,
-        pipeline=test_pipeline),
+        pipeline=test_pipeline,
+        ann_file=data_root + 'val_coco_format.json',
+        img_prefix=data_root + 'JPEGImages/'
+    ),
     test=dict(
         is_class_agnostic=True,
         train_class='all',
         eval_class='all',
         type=dataset_type,
-        pipeline=test_pipeline))
+        pipeline=test_pipeline,
+        ann_file=data_root + 'val_coco_format.json',
+        img_prefix=data_root + 'JPEGImages/'
+    ))
 
 custom_hooks = [dict(type='SetEpochInfoHook')]
 lr_config = dict(
