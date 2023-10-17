@@ -264,7 +264,7 @@ def main():
                         id_json_results = datasets['id']._det2json(results['id'])
                         # ood_json_results = datasets['ood']._det2json(results['ood'])
                     elif isinstance(results['id'][0], tuple):
-                        id_json_results = datasets['id']._segm2json(results['id'])
+                        _, id_json_results = datasets['id']._segm2json(results['id'])
                         # ood_json_results = datasets['ood']._segm2json(results['ood'])
                     gt_coco_api = COCO(id_cfg.data.test.ann_file)
                     res_coco_api = gt_coco_api.loadRes(id_json_results)
