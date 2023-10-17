@@ -29,7 +29,7 @@ def imshow_det_bboxes(img,
                       show=True,
                       wait_time=0,
                       out_file=None,
-                      ood_score=0):
+                      ood_score=0.):
     """Draw bboxes and class labels (with scores) on an image.
 
     Args:
@@ -188,7 +188,8 @@ def show_result(classes,
                 fig_size=(15, 10),
                 show=False,
                 wait_time=0,
-                out_file=None):
+                out_file=None,
+                ood_score=0.):
     """Draw `result` over `img`.
 
     Args:
@@ -264,7 +265,7 @@ def show_result(classes,
         show=show,
         wait_time=wait_time,
         out_file=out_file,
-        ood_score=0)
+        ood_score=ood_score)
 
     if not (show or out_file):
             return img
@@ -277,6 +278,7 @@ class EpochFasterRCNN(FasterRCNN):
     def __init__(self, *args, **kwargs):
         super(EpochFasterRCNN, self).__init__(*args, **kwargs)
         self.epoch = 0
+        self.anomaly_score_threshold = 0.
 
     def set_epoch(self, epoch):
         self.epoch = epoch
@@ -343,7 +345,8 @@ class EpochFasterRCNN(FasterRCNN):
                            fig_size,
                            show,
                            wait_time,
-                           out_file)
+                           out_file,
+                           ood_score=self.anomaly_score_threshold)
 
 
 @DETECTORS.register_module()
@@ -353,6 +356,7 @@ class EpochMaskRCNN(MaskRCNN):
     def __init__(self, *args, **kwargs):
         super(EpochMaskRCNN, self).__init__(*args, **kwargs)
         self.epoch = 0
+        self.anomaly_score_threshold = 0.
 
     def set_epoch(self, epoch):
         self.epoch = epoch
@@ -419,4 +423,5 @@ class EpochMaskRCNN(MaskRCNN):
                            fig_size,
                            show,
                            wait_time,
-                           out_file)
+                           out_file,
+                           ood_score=self.anomaly_score_threshold)

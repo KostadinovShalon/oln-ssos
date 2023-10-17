@@ -51,4 +51,5 @@ class OLNMaskKMeansVOSRoIHead(OLNKMeansVOSRoIHead, MaskScoringOlnRoIHead):
                     bbox_score = b[:, 4]
                     geometric_mask_score = np.cbrt((bbox_score ** 2) * ms)
                     b[:, 4] = geometric_mask_score
+            results = [(bbox_results, segm_results[0]) for bbox_results, segm_results in results]
             return results
