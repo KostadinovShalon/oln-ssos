@@ -264,7 +264,7 @@ def show_result(classes,
         show=show,
         wait_time=wait_time,
         out_file=out_file,
-        ood_score=0.965)
+        ood_score=0)
 
     if not (show or out_file):
             return img

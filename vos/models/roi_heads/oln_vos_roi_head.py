@@ -261,6 +261,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         cls_score = cls_score.split(num_proposals_per_img, 0)
         bbox_score = bbox_score.split(num_proposals_per_img, 0)
         ood_scores = ood_scores.split(num_proposals_per_img, 0)
+        rpn_score = rpn_score.split(num_proposals_per_img, 0)
 
         # some detector with_reg is False, bbox_pred will be None
         if bbox_pred is not None:
