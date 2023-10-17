@@ -50,4 +50,4 @@ custom_hooks = [dict(type='SetEpochInfoHook')]
 optimizer = dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0001)
 # Pretrained on COCO
 load_from = './work_dirs/oln_mask/epoch_8.pth'
-work_dir = './work_dirs/oln_vos_mask_cityscapes_kmeans_5/'
+work_dir = './work_dirs/oln_vos_mask_cityscapes_kmeans_30/'
