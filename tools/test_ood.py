@@ -246,7 +246,12 @@ def main():
                 mmcv.dump(results[out_file], out_file)
             kwargs = {} if args.eval_options is None else args.eval_options
             if args.format_only:
-                datasets[cfg_label].format_results(results[cfg_label], **kwargs)
+                jsonfile_prefix = None
+                if cfg_label == 'id' and "jsonfile_prefix_id" in kwargs:
+                    jsonfile_prefix = kwargs['jsonfile_prefix_id']
+                elif cfg_label == 'ood' and "jsonfile_prefix_ood" in kwargs:
+                    jsonfile_prefix = kwargs['jsonfile_prefix_ood']
+                datasets[cfg_label].format_results(results[cfg_label], jsonfile_prefix=jsonfile_prefix, **kwargs)
             if args.eval:
                 eval_kwargs = id_cfg.get('evaluation', {}).copy()
                 # hard-code way to remove EvalHook args
