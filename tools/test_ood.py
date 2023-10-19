@@ -208,7 +208,8 @@ def main():
         # build the model and load checkpoint
         cfg.model.train_cfg = None
         model = build_detector(cfg.model, test_cfg=cfg.get('test_cfg'))
-        model.anomaly_score_threshold = anomaly_score_threshold if anomaly_score_threshold is not None else 1.
+        model.roi_head.bbox_head.ood_score_threshold = \
+            anomaly_score_threshold if anomaly_score_threshold is not None else 0.
         fp16_cfg = cfg.get('fp16', None)
         if fp16_cfg is not None:
             wrap_fp16_model(model)

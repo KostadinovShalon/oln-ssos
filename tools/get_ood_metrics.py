@@ -79,12 +79,12 @@ def main(args):
         optimal_score_threshold = optimal_score_threshold.mean()
         print("Optimal score threshold: ", optimal_score_threshold)
 
-    id_inter_feats = [torch.tensor(id_r['inter_feats']) for id_r in id_results if id_r['score'] > optimal_score_threshold]
-    id_inter_feats = torch.logsumexp(torch.stack(id_inter_feats)[:, :-1], dim=1).sigmoid().cpu().data.numpy()
+    # id_inter_feats = [torch.tensor(id_r['inter_feats']) for id_r in id_results if id_r['score'] > optimal_score_threshold]
+    # id_inter_feats = torch.logsumexp(torch.stack(id_inter_feats)[:, :-1], dim=1).sigmoid().cpu().data.numpy()
     id_scores = [id_r['ood_score'] for id_r in id_results if id_r['score'] > optimal_score_threshold]
 
-    ood_inter_feats = [torch.tensor(ood_r['inter_feats']) for ood_r in ood_results if ood_r['score'] > optimal_score_threshold]
-    ood_inter_feats = torch.logsumexp(torch.stack(ood_inter_feats)[:, :-1], dim=1).sigmoid().cpu().data.numpy()
+    # ood_inter_feats = [torch.tensor(ood_r['inter_feats']) for ood_r in ood_results if ood_r['score'] > optimal_score_threshold]
+    # ood_inter_feats = torch.logsumexp(torch.stack(ood_inter_feats)[:, :-1], dim=1).sigmoid().cpu().data.numpy()
     ood_scores = [ood_r['ood_score'] for ood_r in ood_results if ood_r['score'] > optimal_score_threshold]
 
     print(len(id_scores))
@@ -97,8 +97,8 @@ def main(args):
     measures = get_measures(id_scores, ood_scores)
     print_measures(*measures, method_name='Metrics with Weights')
 
-    measures = get_measures(id_inter_feats, ood_inter_feats)
-    print_measures(*measures, method_name='Metrics without Weights')
+    # measures = get_measures(id_inter_feats, ood_inter_feats)
+    # print_measures(*measures, method_name='Metrics without Weights')
 
 
 if __name__ == '__main__':

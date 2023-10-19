@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 from mmcv.ops import batched_nms
 from mmcv.runner import force_fp32
@@ -14,7 +15,8 @@ def multiclass_nms_with_ood(multi_bboxes,
                             nms_cfg,
                             max_num=-1,
                             score_factors=None,
-                            return_inds=False):
+                            return_inds=False,
+                            ood_score_threshold=0.):
     """NMS for multi-class bboxes.
 
     Args:
@@ -78,11 +80,40 @@ def multiclass_nms_with_ood(multi_bboxes,
             return bboxes, labels, multi_ood_scores, inter_feats
 
     # TODO: add size check before feed into batched_nms
-    dets, keep = batched_nms(bboxes, scores, labels, nms_cfg)
+    id_indices = multi_ood_scores >= ood_score_threshold
+    ood_indices = multi_ood_scores < ood_score_threshold
+    _labels = labels * id_indices.to(torch.int8).cpu() + \
+              (labels.max() + 1) * (1 - id_indices.to(torch.int8).cpu())
+    dets, keep = batched_nms(bboxes,
+                             scores,
+                             labels,
+                             nms_cfg)
+    # if len(bboxes[id_indices]) > 0:
+    #     id_dets, id_keep = batched_nms(bboxes[id_indices],
+    #                                    scores[id_indices],
+    #                                    labels[id_indices],
+    #                                    nms_cfg)
+    # else:
+    #     id_dets, id_keep = torch.empty((0, 5)).to(id_indices.device), torch.empty(0, dtype=torch.int16).to(id_indices.device)
+    # if len(bboxes[ood_indices]) > 0:
+    #     ood_dets, ood_keep = batched_nms(bboxes[ood_indices],
+    #                                      scores[ood_indices],
+    #                                      labels[ood_indices],
+    #                                      nms_cfg)
+    # else:
+    #     ood_dets, ood_keep = torch.empty((0, 5)).to(id_indices.device), torch.empty(0, dtype=torch.int16).to(id_indices.device)
+    #
+    # dets = torch.cat((ood_dets, id_dets), dim=0)
+    # keep = torch.cat((ood_keep, id_keep), dim=0)
+
+    _keep = torch.cat((keep[multi_ood_scores[keep] < ood_score_threshold],
+                       keep[multi_ood_scores[keep] >= ood_score_threshold]), dim=0)
+    _dets = torch.cat((dets[multi_ood_scores[keep] < ood_score_threshold],
+                       dets[multi_ood_scores[keep] >= ood_score_threshold]), dim=0)
 
     if max_num > 0:
-        dets = dets[:max_num]
-        keep = keep[:max_num]
+        dets = _dets[:max_num]
+        keep = _keep[:max_num]
 
     if inter_feats is not None:
         inter_feats = inter_feats[keep]

@@ -278,7 +278,7 @@ class EpochFasterRCNN(FasterRCNN):
     def __init__(self, *args, **kwargs):
         super(EpochFasterRCNN, self).__init__(*args, **kwargs)
         self.epoch = 0
-        self.anomaly_score_threshold = 0.
+        self.roi_head.bbox_head.ood_score_threshold = 0.
 
     def set_epoch(self, epoch):
         self.epoch = epoch
@@ -346,7 +346,7 @@ class EpochFasterRCNN(FasterRCNN):
                            show,
                            wait_time,
                            out_file,
-                           ood_score=self.anomaly_score_threshold)
+                           ood_score=self.roi_head.bbox_head.ood_score_threshold)
 
 
 @DETECTORS.register_module()
@@ -356,7 +356,7 @@ class EpochMaskRCNN(MaskRCNN):
     def __init__(self, *args, **kwargs):
         super(EpochMaskRCNN, self).__init__(*args, **kwargs)
         self.epoch = 0
-        self.anomaly_score_threshold = 0.
+        self.roi_head.bbox_head.ood_score_threshold = 0.
 
     def set_epoch(self, epoch):
         self.epoch = epoch
@@ -424,4 +424,4 @@ class EpochMaskRCNN(MaskRCNN):
                            show,
                            wait_time,
                            out_file,
-                           ood_score=self.anomaly_score_threshold)
+                           ood_score=self.roi_head.bbox_head.ood_score_threshold)

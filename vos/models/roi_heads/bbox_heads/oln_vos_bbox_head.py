@@ -9,6 +9,10 @@ from vos.models.roi_heads.bbox_heads.vos_convfc_bbox_head import multiclass_nms_
 @HEADS.register_module()
 class VOSShared2FCBBoxScoreHead(Shared2FCBBoxScoreHead):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.ood_score_threshold = 0.
+
     def forward(self, x):
         # shared part
         if self.num_shared_convs > 0:
@@ -84,6 +88,7 @@ class VOSShared2FCBBoxScoreHead(Shared2FCBBoxScoreHead):
             det_bboxes, det_labels, det_ood_scores, _ = multiclass_nms_with_ood(bboxes, scores, ood_scores,
                                                                                 None,
                                                                                 cfg.score_thr, cfg.nms,
-                                                                                cfg.max_per_img)
+                                                                                cfg.max_per_img,
+                                                                                ood_score_threshold=self.ood_score_threshold)
 
             return det_bboxes, det_labels, det_ood_scores
