@@ -157,7 +157,7 @@ model = dict(
             # proposals on the 'seen' classes into the budget (k), to avoid
             # evaluating recall on seen-class objects. It's recommended to use
             # max_per_img=1500 or 2000 when evaluating upto AR@1000.
-            max_per_img=1500,
+            max_per_img=500,
             mask_thr_binary=0.5
             )
     ))
