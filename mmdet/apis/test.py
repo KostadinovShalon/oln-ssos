@@ -5,6 +5,7 @@ import tempfile
 import time
 
 import mmcv
+import numpy as np
 import torch
 import torch.distributed as dist
 from mmcv.image import tensor2imgs
@@ -25,6 +26,27 @@ def single_gpu_test(model,
     for i, data in enumerate(data_loader):
         with torch.no_grad():
             result = model(return_loss=False, rescale=True, **data)
+        # segm_maps = np.stack(result[0][1][0], axis=0)
+        # ood_scores = result[0][0][0][:, 5]
+        # count = np.sum(segm_maps, axis=0)
+        # ood = ood_scores[:, None, None] * segm_maps
+        # sum_ood = np.sum(ood, axis=0)
+        # max_ood = np.max(ood, axis=0)
+        # avg = sum_ood / count
+        # avg[np.isnan(avg)] = 1.0
+        # max_ood[max_ood == 0] = 1.
+        # ood[ood == 0] = 1
+        # min_ood = np.min(ood, axis=0)
+        # from matplotlib import pyplot as plt
+        # plt.imshow(avg, cmap='gray', vmin=0.9, vmax=1.0)
+        # plt.show()
+        # plt.imshow(max_ood, cmap='gray', vmin=0.9, vmax=1.0)
+        # plt.show()
+        # plt.imshow(min_ood, cmap='gray', vmin=0.9, vmax=1.0)
+        # plt.show()
+        #
+        # plt.imshow(mmcv.bgr2rgb(mmcv.imread(data['img_metas'][0].data[0][0]['filename'])))
+        # plt.show()
 
         batch_size = len(result)
         if show or out_dir:
