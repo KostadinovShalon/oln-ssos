@@ -34,17 +34,17 @@ data = dict(
     workers_per_gpu=8,
     train=dict(
         ann_file=data_root + 'annotations/v3det_2023_v1_train.json',
-        img_prefix=data_root + 'images/',
+        img_prefix=data_root,
         train_class='all',
         eval_class='all',
         pipeline=train_pipeline,
         ),
     val=dict(
         ann_file=data_root + 'annotations/v3det_2023_v1_val.json',
-        img_prefix=data_root + 'images/',),
+        img_prefix=data_root,),
     test=dict(
         ann_file=data_root + 'annotations/v3det_2023_v1_val.json',
-        img_prefix=data_root + 'images/',))
+        img_prefix=data_root,))
 
 # optimizer
 optimizer = dict(type='SGD', lr=0.0001, momentum=0.9, weight_decay=0.0001)
