@@ -61,5 +61,18 @@ lr_config = dict(
     step=[6, 7])
 total_epochs = 8
 checkpoint_config = dict(interval=1)
+# yapf:disable
+log_config = dict(
+    interval=20,
+    hooks=[
+        dict(type='TextLoggerHook'),
+        dict(type='TensorboardLoggerHook')
+    ])
+# yapf:enable
+dist_params = dict(backend='nccl')
+log_level = 'INFO'
+load_from = None
+resume_from = None
+workflow = [('train', 1)]
 
 work_dir='./work_dirs/oln_box_v3det/'
