@@ -2,8 +2,6 @@ base = './oln_box.py'
 
 model = dict(
     # model training and testing settings
-    train_cfg=dict(
-        rpn_proposal=dict(nms_pre=4000)),
     test_cfg=dict(
         rcnn=dict(
             score_thr=0.0001,
