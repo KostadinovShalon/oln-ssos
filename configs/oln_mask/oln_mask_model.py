@@ -150,14 +150,14 @@ model = dict(
             nms_thr=0.0,  # No nms
             min_bbox_size=0),
         rcnn=dict(
-            score_thr=0.0,
+            score_thr=0.5,
             nms=dict(type='nms', iou_threshold=0.7),
             # max_per_img should be greater enough than k of AR@k evaluation
             # because the cross-dataset AR evaluation does not count those
             # proposals on the 'seen' classes into the budget (k), to avoid
             # evaluating recall on seen-class objects. It's recommended to use
             # max_per_img=1500 or 2000 when evaluating upto AR@1000.
-            max_per_img=500,
+            max_per_img=300,
             mask_thr_binary=0.5
             )
     ))

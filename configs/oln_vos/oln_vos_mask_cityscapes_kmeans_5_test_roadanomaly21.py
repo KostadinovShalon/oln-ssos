@@ -9,4 +9,3 @@ data = dict(
                  'instances.json',
         img_prefix=data_root + 'images/')
 )
-work_dir = './work_dirs/oln_vos_mask_cityscapes_kmeans_5_test_roadanomaly21/'

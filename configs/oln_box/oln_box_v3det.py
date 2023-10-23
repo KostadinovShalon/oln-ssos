@@ -1,12 +1,9 @@
-base = './oln_box.py'
+_base_ = './oln_box.py'
 
 model = dict(
     # model training and testing settings
     train_cfg=dict(
-        rpn_proposal=dict(nms_pre=4000),
-        rcnn=dict(
-            assigner=dict(
-                perm_repeat_gt_cfg=dict(iou_thr=0.7)))),
+        rpn_proposal=dict(nms_pre=4000)),
     test_cfg=dict(
         rcnn=dict(
             score_thr=0.0001,
@@ -37,17 +34,17 @@ data = dict(
     workers_per_gpu=8,
     train=dict(
         ann_file=data_root + 'annotations/v3det_2023_v1_train.json',
-        img_prefix=data_root + 'images/',
+        img_prefix=data_root,
         train_class='all',
         eval_class='all',
         pipeline=train_pipeline,
         ),
     val=dict(
         ann_file=data_root + 'annotations/v3det_2023_v1_val.json',
-        img_prefix=data_root + 'images/',),
+        img_prefix=data_root,),
     test=dict(
         ann_file=data_root + 'annotations/v3det_2023_v1_val.json',
-        img_prefix=data_root + 'images/',))
+        img_prefix=data_root,))
 
 # optimizer
 optimizer = dict(type='SGD', lr=0.0001, momentum=0.9, weight_decay=0.0001)
@@ -61,5 +58,18 @@ lr_config = dict(
     step=[6, 7])
 total_epochs = 8
 checkpoint_config = dict(interval=1)
+# yapf:disable
+log_config = dict(
+    interval=20,
+    hooks=[
+        dict(type='TextLoggerHook'),
+        dict(type='TensorboardLoggerHook')
+    ])
+# yapf:enable
+dist_params = dict(backend='nccl')
+log_level = 'INFO'
+load_from = None
+resume_from = None
+workflow = [('train', 1)]
 
 work_dir='./work_dirs/oln_box_v3det/'
