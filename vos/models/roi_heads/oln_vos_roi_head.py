@@ -96,8 +96,8 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
         for m in self.pseudo_score.modules():
             if type(m) == nn.Linear:
-                nn.init.normal_(self.pseudo_score.weight, std=0.01)
-                nn.init.constant_(self.pseudo_score.bias, 0)
+                nn.init.normal_(m.weight, std=0.01)
+                nn.init.constant_(m.bias, 0)
 
         self.means = None
         self.cov = None
