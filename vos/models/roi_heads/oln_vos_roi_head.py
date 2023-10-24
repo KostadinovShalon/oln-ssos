@@ -86,9 +86,18 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.k_means_batches_to_restart = 20
         self.kmeans_minibatches_passed = 0
 
-        self.pseudo_score = nn.Linear(1024, self.k)
-        nn.init.normal_(self.pseudo_score.weight, std=0.01)
-        nn.init.constant_(self.pseudo_score.bias, 0)
+        self.pseudo_score = nn.Sequential(
+            nn.Linear(1024, 512),
+            nn.ReLU(),
+            nn.Linear(512, 512),
+            nn.ReLU(),
+            nn.Linear(512, self.k)
+        )
+
+        for m in self.pseudo_score.modules():
+            if type(m) == nn.Linear:
+                nn.init.normal_(m.weight, std=0.01)
+                nn.init.constant_(m.bias, 0)
 
         self.means = None
         self.cov = None

@@ -32,8 +32,8 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=0.001,
-    step=[4])
-total_epochs = 5
+    step=[4, 6])
+total_epochs = 7
 
 data = dict(
     samples_per_gpu=16,
@@ -47,7 +47,7 @@ data = dict(
 )
 
 custom_hooks = [dict(type='SetEpochInfoHook')]
-optimizer = dict(type='SGD', lr=0.002, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 # Pretrained on COCO
 load_from = './work_dirs/oln_mask/epoch_8.pth'
 work_dir = './work_dirs/oln_vos_mask_cityscapes_kmeans_5/'

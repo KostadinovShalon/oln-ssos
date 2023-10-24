@@ -29,14 +29,20 @@ def binary_confusion_matrix(
 	if bin_strategy == 'uniform':
 		# bins spread uniforms in 0 .. 1
 		bins = num_bins
-		histogram_range = [0, 1]
+		histogram_range = [-0.01, 1.01]
 
 	elif bin_strategy == 'percentiles':
 		# dynamic bins representing the range of occurring values
 		# bin edges are following the distribution of positive and negative pixels
 
+		# choose thresholds to surround the range of values
+		vmin = np.min(prob)
+		vmax = np.max(prob)
+		vrange = vmax-vmin
+		eps = np.maximum(vrange*1e-2, 1e-2) # make sure there is some separation between the thresholds
+
 		bins = [
-			[0, 1], # make sure 0 and 1 are included
+			[vmin - eps, vmax + eps]
 		]
 
 		if prob_at_true.size:
@@ -107,7 +113,7 @@ def binary_confusion_matrix(
 
 def test_binary_confusion_matrix():
 	pp = np.array([0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
-	gt = np.array([0, 0, 0, 0, 0, 1, 1, 0, 1], dtype=np.bool)
+	gt = np.array([0, 0, 0, 0, 0, 1, 1, 0, 1], dtype=bool)
 	cmat = binary_confusion_matrix(pp, gt, levels=20).cmat_sum
 	cmat_all_p = np.sum(cmat[:, :, 0], axis=1)
 	cmat_all_n = np.sum(cmat[:, :, 1], axis=1)
@@ -141,7 +147,8 @@ class MetricPixelClassification(EvaluationMetric):
 	def name(self):
 		return self.cfg.name
 	
-	def vis_frame(self, fid, dset_name, method_name, mask_roi, anomaly_p, image = None, label_pixel_gt = None, **_):
+	@staticmethod
+	def vis_frame(fid, dset_name, method_name, mask_roi, anomaly_p, image = None, label_pixel_gt = None, **_):
 		h, w = mask_roi.shape[:2]
 
 		canvas = image.copy() if image is not None else np.zeros((h, w, 3), dtype=np.uint8)
@@ -154,7 +161,7 @@ class MetricPixelClassification(EvaluationMetric):
 
 		anomaly_heat = get_heat(anomaly_p, overlay=label_pixel_gt)
 		imwrite(
-			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP_heat.png',
+			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP_heat.webp',
 			anomaly_heat,
 		)
 
@@ -170,9 +177,10 @@ class MetricPixelClassification(EvaluationMetric):
 		@param fid: frame identifier, for saving extra outputs
 		@param dset_name: dataset identifier, for saving extra outputs
 		"""
-
-		mask_roi = label_pixel_gt < 255
-
+		try:
+			mask_roi = label_pixel_gt < 255
+		except TypeError:
+			raise RuntimeError(f"No ground truth available for {fid}. Please check dataset path...")
 		labels_in_roi = label_pixel_gt[mask_roi]
 		predictions_in_roi = anomaly_p[mask_roi]
 
