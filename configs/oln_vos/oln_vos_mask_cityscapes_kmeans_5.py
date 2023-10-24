@@ -32,8 +32,8 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=0.001,
-    step=[4])
-total_epochs = 5
+    step=[4, 6])
+total_epochs = 7
 
 data = dict(
     samples_per_gpu=16,
