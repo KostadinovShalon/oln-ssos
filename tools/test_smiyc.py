@@ -35,7 +35,7 @@ def main(args):
     model = init_detector(args.config, args.checkpoint, device=args.device)
     # test a single image
     ev = Evaluation(
-        method_name='OLNVOSMASK_min_k5',
+        method_name='OLNVOSMASK_min_k30_deep_epoch_5',
         dataset_name='AnomalyTrack-validation',
         # dataset_name = 'AnomalyTrack-test',
     )
@@ -58,6 +58,7 @@ def main(args):
 
         # avg = 1 - avg
         min_ood = 1 - min_ood
+        min_ood += 1e-8
         # max_ood = 1 - max_ood
         # provide the output for saving
         ev.save_output(frame, min_ood)
