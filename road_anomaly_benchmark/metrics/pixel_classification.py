@@ -155,13 +155,13 @@ class MetricPixelClassification(EvaluationMetric):
 		heatmap_color = adapt_img_data(anomaly_p)
 		canvas[mask_roi] = canvas[mask_roi]//2 + heatmap_color[mask_roi]//2
 		imwrite(
-			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP.webp',
+			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP.png',
 			canvas,
 		)
 
 		anomaly_heat = get_heat(anomaly_p, overlay=label_pixel_gt)
 		imwrite(
-			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP_heat.webp',
+			DIR_OUTPUTS / f'vis_PixelClassification' / method_name / dset_name / f'{fid}_demo_anomalyP_heat.png',
 			anomaly_heat,
 		)
 
