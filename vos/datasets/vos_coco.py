@@ -85,3 +85,15 @@ class VOSCocoSplitDataset(CocoSplitDataset):
                     data['segmentation'] = segms[i]
                     segm_json_results.append(data)
         return bbox_json_results, segm_json_results
+
+
+@DATASETS.register_module()
+class VOSDB6SplitDataset(VOSCocoSplitDataset):
+    CLASSES = ('firearm', 'firearmpart', 'knife', 'camera', 'ceramic_knife', 'laptop')
+    ID_CLASSES = ('knife', 'camera', 'ceramic_knife', 'laptop')
+    OOD_CLASSES = ('firearm', 'firearmpart')
+    class_names_dict = {
+        'all': CLASSES,
+        'id': ID_CLASSES,
+        'ood': OOD_CLASSES
+    }
