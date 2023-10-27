@@ -31,7 +31,7 @@ model = dict(
 checkpoint_config = dict(interval=1)
 dataset_type = "VOSDB6SplitDataset"
 
-optimizer = dict(type='SGD', lr=0.0001, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 lr_config = dict(
     policy='step',
     warmup='linear',
