@@ -24,7 +24,7 @@ model = dict(
         ood_loss_weight=0.1,
         k=5,
         repeat_ood_sampling=4,
-        use_all_proposals_ood=True,
+        use_all_proposals_ood=False,
         bbox_head=dict(
             type='VOSShared2FCBBoxScoreHead'))
     )

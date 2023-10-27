@@ -241,7 +241,9 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 energy_score_for_bg = torch.logsumexp(predictions_ood, 1)
 
                 input_for_loss = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
-                labels_for_loss = torch.cat((torch.ones(len(selected_fg_samples)).to(device),
+                id_labels_size = len(selected_fg_samples) if not self.use_all_proposals_ood else \
+                    len(bbox_results['shared_bbox_feats'])
+                labels_for_loss = torch.cat((torch.ones(id_labels_size).to(device),
                                            torch.zeros(len(ood_samples)).to(device)), -1)
 
                 output = self.logistic_regression_layer(input_for_loss.view(-1, 1))
