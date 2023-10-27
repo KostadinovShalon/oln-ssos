@@ -24,6 +24,7 @@ model = dict(
         ood_loss_weight=0.1,
         k=5,
         repeat_ood_sampling=4,
+        use_all_proposals_ood=True,
         bbox_head=dict(
             type='VOSShared2FCBBoxScoreHead'))
     )
@@ -41,7 +42,7 @@ lr_config = dict(
 total_epochs = 7
 
 data = dict(
-    samples_per_gpu=16,
+    samples_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type),

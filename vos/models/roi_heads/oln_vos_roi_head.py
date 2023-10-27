@@ -45,6 +45,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                  recalculate_pseudolabels_every_epoch=1,
                  k_means_minibatch=True,
                  repeat_ood_sampling=4,
+                 use_all_proposals_ood=False,
                  *args,
                  **kwargs):
         """
@@ -107,6 +108,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                      type='CrossEntropyLoss',
                      use_sigmoid=False,
                      loss_weight=self.ood_loss_weight))
+        self.use_all_proposals_ood = use_all_proposals_ood
 
     def _bbox_forward(self, x, rois):
         """Box head forward function used in both training and testing."""
@@ -206,17 +208,22 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         loss_pseudo_score = torch.zeros(1).cuda()
         ood_samples = []
         if self.kmeans is not None:
-            gt_pseudo_labels = self.kmeans.predict(gt_box_features.detach().cpu())
+            if not self.use_all_proposals_ood:
+                gt_pseudo_labels = self.kmeans.predict(gt_box_features.detach().cpu())
+                gt_pseudo_logits = self.pseudo_score(gt_box_features)
+            else:
+                gt_pseudo_labels = self.kmeans.predict(bbox_results['shared_bbox_feats'].detach().cpu())
+                gt_pseudo_logits = self.pseudo_score(bbox_results['shared_bbox_feats'])
             gt_pseudo_labels = torch.tensor(gt_pseudo_labels).to(gt_box_features.device)
 
-            gt_pseudo_logits = self.pseudo_score(gt_box_features)
             loss_pseudo_score = self.loss_pseudo_cls(gt_pseudo_logits, gt_pseudo_labels.long())
 
             if self.epoch >= self.start_epoch and self.cov is not None:
                 for i, mean in enumerate(self.means):
                     new_dis = torch.distributions.multivariate_normal.MultivariateNormal(
                         mean, covariance_matrix=self.cov)
-                    for _ in range(self.repeat_ood_sampling):
+                    repeat_factor = 10 if self.use_all_proposals_ood else 1
+                    for _ in range(self.repeat_ood_sampling * repeat_factor):
                         negative_samples = new_dis.rsample((self.negative_sampling_size,))
                         prob_density = new_dis.log_prob(negative_samples)
 
