@@ -248,8 +248,8 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
                 output = self.logistic_regression_layer(input_for_loss.view(-1, 1))
                 ood_reg_loss = F.binary_cross_entropy_with_logits(
-                    output.view(-1), labels_for_loss)
-                    # , pos_weight=torch.tensor(len(ood_samples)/len(selected_fg_samples)).cuda())
+                    output.view(-1), labels_for_loss
+                    , pos_weight=torch.tensor(len(ood_samples)/len(selected_fg_samples)).cuda())
         return ood_reg_loss, loss_pseudo_score
 
     def simple_test_bboxes(self,
