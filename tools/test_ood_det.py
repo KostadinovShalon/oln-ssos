@@ -107,12 +107,6 @@ def parse_args():
 def main():
     args = parse_args()
 
-    assert args.out or args.eval or args.format_only or args.show \
-        or args.show_dir, \
-        ('Please specify at least one operation (save/eval/format/show the '
-         'results / save the results) with the argument "--out", "--eval"',
-         ', "--format-only", "--show" or "--show-dir"')
-
     if args.eval and args.format_only:
         raise ValueError('--eval and --format_only cannot be both specified')
 
@@ -168,7 +162,7 @@ def main():
         init_dist(args.launcher, **cfg.dist_params)
 
     # build the dataloader
-    if args.mode == 'ood' and (optimal_score_threshold is None or anomaly_score_threshold is not None):
+    if args.mode == 'ood' and (optimal_score_threshold is None or anomaly_score_threshold is None):
         raise ValueError('Optimal Scores and Anomaly Scores needed for OOD ')
 
     dataset = build_dataset(cfg.data.test)
@@ -229,28 +223,31 @@ def main():
                 eval_kwargs.pop(key, None)
             eval_kwargs.update(dict(metric=args.eval, **kwargs))
             print(dataset.evaluate(outputs, **eval_kwargs))
+        print(f"\ngetting id optimal score threshold")
+        if isinstance(outputs[0], list):
+            iou_type = 'bbox'
+            results = dataset._det2json(outputs)
+            # ood_json_results = datasets['ood']._det2json(results['ood'])
+        elif isinstance(outputs[0], tuple):
+            iou_type = 'segm'
+            _, results = dataset._segm2json(outputs)
+            # ood_json_results = datasets['ood']._segm2json(results['ood'])
+        if args.mode == 'ood':
+            results = [r for r in results if r['score'] > optimal_score_threshold
+                               and r['ood_score'] > anomaly_score_threshold]
+
+        gt_coco_api = COCO(cfg.data.test.ann_file)
+        res_coco_api = gt_coco_api.loadRes(results)
+        results_api = COCOeval(gt_coco_api, res_coco_api, iouType=iou_type)
+
+        # results_api.params.catIds = np.array([1])
+
+        # Calculate and print aggregate results
+        results_api.params.useCats = 0
+        results_api.evaluate()
+        results_api.accumulate()
+        results_api.summarize()
         if args.mode == 'id':
-            print(f"\ngetting id optimal score threshold")
-            if isinstance(outputs[0], list):
-                iou_type = 'bbox'
-                id_json_results = dataset._det2json(outputs)
-                # ood_json_results = datasets['ood']._det2json(results['ood'])
-            elif isinstance(outputs[0], tuple):
-                iou_type = 'segm'
-                _, id_json_results = dataset._segm2json(outputs)
-                # ood_json_results = datasets['ood']._segm2json(results['ood'])
-            gt_coco_api = COCO(cfg.data.test.ann_file)
-            res_coco_api = gt_coco_api.loadRes(id_json_results)
-            results_api = COCOeval(gt_coco_api, res_coco_api, iouType=iou_type)
-
-            # results_api.params.catIds = np.array([1])
-
-            # Calculate and print aggregate results
-            results_api.params.useCats = 0
-            results_api.evaluate()
-            results_api.accumulate()
-            results_api.summarize()
-
             # Compute optimal micro F1 score threshold. We compute the f1 score for
             # every class and score threshold. We then compute the score threshold that
             # maximizes the F-1 score of every class. The final score threshold is the average
@@ -267,8 +264,11 @@ def main():
             optimal_score_threshold = optimal_score_threshold.mean()
             print("Optimal score threshold: ", optimal_score_threshold)
             if anomaly_score_threshold is None:
-                optimal_results = [r for r in id_json_results if r['score'] > optimal_score_threshold]
-                ood_scores = [o['ood_score'] for o in optimal_results]
+                dt_ids_with_match = [int(dt_id) for ev_im in results_api.evalImgs for dt_id in ev_im['gtMatches'][0] if
+                                     dt_id > 0]
+                valid_detections = results_api.cocoDt.loadAnns(dt_ids_with_match)
+                optimal_detections = [v for v in valid_detections if v['score'] > optimal_score_threshold]
+                ood_scores = [o['ood_score'] for o in optimal_detections]
                 ood_scores.sort()
                 anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
             print("Anomaly Score Threshold: ", anomaly_score_threshold)
