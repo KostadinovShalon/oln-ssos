@@ -23,6 +23,7 @@ model = dict(
         bottomk_epsilon_dist=1,
         ood_loss_weight=0.1,
         k=5,
+        use_all_proposals_ood=True,
         repeat_ood_sampling=4,
         bbox_head=dict(
             type='VOSShared2FCBBoxScoreHead'))
