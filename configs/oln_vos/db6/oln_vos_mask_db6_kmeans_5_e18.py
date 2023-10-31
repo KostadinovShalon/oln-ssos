@@ -17,7 +17,7 @@ model = dict(
     type='EpochMaskRCNN',
     roi_head=dict(
         type='OLNMaskKMeansVOSRoIHead',
-        start_epoch=12,
+        start_epoch=4,
         logistic_regression_hidden_dim=512,
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
@@ -32,7 +32,7 @@ model = dict(
 checkpoint_config = dict(interval=1)
 dataset_type = "VOSDB6SplitDataset"
 
-optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 lr_config = dict(
     policy='step',
     warmup='linear',
