@@ -6,6 +6,8 @@ from sklearn.cluster import MiniBatchKMeans, KMeans
 
 from mmdet.core import bbox2roi
 from mmdet.models import HEADS, OlnRoIHead, build_loss
+import warnings
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 def bbox2result_ood(bboxes, labels, ood_scores, num_classes):
@@ -163,10 +165,10 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
             if len(self.ft_minibatches) >= 1024:
                 if self.kmeans is None:
                     self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
-                # elif self.kmeans_minibatches_passed >= self.k_means_batches_to_restart:
-                #     self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
-                #                                   init=self.kmeans.cluster_centers_)
-                #     self.kmeans_minibatches_passed = 0
+                elif self.kmeans_minibatches_passed >= self.k_means_batches_to_restart:
+                    self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
+                                                  init=self.kmeans.cluster_centers_)
+                    self.kmeans_minibatches_passed = 0
                 self.kmeans = self.kmeans.partial_fit(
                     torch.cat(self.ft_minibatches[-1024:], dim=0).cpu()
                 )
@@ -200,7 +202,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         ood_reg_loss = torch.zeros(1).to(device)
         loss_pseudo_score = torch.zeros(1).cuda()
         ood_samples = []
-        if self.kmeans is not None:
+        if self.kmeans is not None and self.kmeans_minibatches_passed > 10:
             if not self.use_all_proposals_ood:
                 gt_pseudo_labels = self.kmeans.predict(gt_box_features.detach().cpu())
                 gt_pseudo_logits = self.pseudo_score(gt_box_features)
@@ -208,7 +210,9 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 gt_pseudo_labels = self.kmeans.predict(bbox_results['shared_bbox_feats'].detach().cpu())
                 gt_pseudo_logits = self.pseudo_score(bbox_results['shared_bbox_feats'])
             gt_pseudo_labels = torch.tensor(gt_pseudo_labels).to(gt_box_features.device)
-
+            total_samples = sum(self.kmeans.counts_)
+            cw = total_samples / (self.k * self.kmeans.counts_)
+            self.loss_pseudo_cls.class_weight = cw
             loss_pseudo_score = self.loss_pseudo_cls(gt_pseudo_logits, gt_pseudo_labels.long())
 
             if self.epoch >= self.start_epoch and self.cov is not None:
