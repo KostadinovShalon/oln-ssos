@@ -7,3 +7,5 @@ model = dict(
 )
 
 load_from = './work_dirs/oln_mask/epoch_8.pth'
+# Runner type
+runner = dict(type='PseudoLabelEpochBasedRunner')

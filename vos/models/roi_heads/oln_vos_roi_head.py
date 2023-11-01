@@ -147,6 +147,9 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         bbox_results.update(loss_bbox=loss_bbox)
         return bbox_results
 
+    def run_pseudo_label_iter(self, x):
+        print(x)
+
     def _ood_forward_train(self, bbox_results, bbox_targets, device):
         n_classes = bbox_results['cls_score'].shape[1]
         selected_fg_samples = (bbox_targets[0] != n_classes - 1).nonzero().view(-1)
