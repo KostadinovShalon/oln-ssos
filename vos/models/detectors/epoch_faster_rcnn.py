@@ -81,7 +81,7 @@ def imshow_det_bboxes(img,
         if segms is not None:
             segms = segms[inds, ...]
 
-    if ood_score > 0:
+    if ood_score > 0 and bboxes.shape[0] > 0:
         assert bboxes.shape[1] == 6
         ood_scores = bboxes[:, 5]
         inds = ood_scores < ood_score
@@ -132,7 +132,7 @@ def imshow_det_bboxes(img,
         if len(bbox) > 4:
             label_text += f'{bbox[4]:.02f}'
         if len(bbox) > 5:
-            label_text += f'|{bbox[5]:.02f}'
+            label_text += f'|{bbox[5]:.07f}'
         ax.text(
             bbox_int[0],
             bbox_int[1],

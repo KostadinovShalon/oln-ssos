@@ -170,10 +170,10 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
             if len(self.ft_minibatches) >= 1024:
                 if self.kmeans is None:
                     self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
-                elif self.kmeans_minibatches_passed >= self.k_means_batches_to_restart:
-                    self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
-                                                  init=self.kmeans.cluster_centers_)
-                    self.kmeans_minibatches_passed = 0
+                # elif self.kmeans_minibatches_passed >= self.k_means_batches_to_restart:
+                #     self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
+                #                                   init=self.kmeans.cluster_centers_)
+                #     self.kmeans_minibatches_passed = 0
                 self.kmeans = self.kmeans.partial_fit(
                     torch.cat(self.ft_minibatches[-1024:], dim=0).cpu()
                 )
