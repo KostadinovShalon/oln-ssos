@@ -142,13 +142,6 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         ood_loss, pseudo_loss = self._ood_forward_train(bbox_results, bbox_targets, device=x[0].device)
         loss_bbox["loss_ood"] = self.ood_loss_weight * ood_loss
         loss_bbox["loss_pseudo_class"] = pseudo_loss
-        f = torch.nn.MSELoss()
-        loss_dummy = f(self.logistic_regression_layer(torch.zeros(1).cuda()),
-                       self.logistic_regression_layer(torch.zeros(1).cuda()))
-        loss_dummy1 = f(self.pseudo_score(torch.zeros(1024).cuda()),
-                        self.pseudo_score(torch.zeros(1024).cuda()))
-        loss_bbox["loss_dummy"] = loss_dummy
-        loss_bbox["loss_dummy1"] = loss_dummy1
         bbox_results.update(loss_bbox=loss_bbox)
         return bbox_results
 
