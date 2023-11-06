@@ -22,6 +22,7 @@ model = dict(
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
         ood_loss_weight=0.1,
+        pseudo_label_loss_weight=1.,
         k=5,
         repeat_ood_sampling=4,
         use_all_proposals_ood=False,
@@ -36,9 +37,9 @@ optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=500,
+    warmup_iters=100,
     warmup_ratio=0.001,
-    step=[4, 6])
+    step=[5])
 total_epochs = 7
 
 data = dict(

@@ -43,6 +43,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                  negative_sampling_size=10000,
                  bottomk_epsilon_dist=1,
                  ood_loss_weight=0.1,
+                 pseudo_label_loss_weight=1.0,
                  k=5,
                  recalculate_pseudolabels_every_epoch=1,
                  k_means_minibatch=True,
@@ -108,6 +109,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.use_all_proposals_ood = use_all_proposals_ood
 
         self.post_epoch_features = []
+        self.pseudo_label_loss_weight = pseudo_label_loss_weight
 
     def _bbox_forward(self, x, rois):
         """Box head forward function used in both training and testing."""
@@ -140,7 +142,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         # VOS STARTS HERE
         ood_loss, pseudo_loss = self._ood_forward_train(bbox_results, bbox_targets, device=x[0].device)
         loss_bbox["loss_ood"] = self.ood_loss_weight * ood_loss
-        loss_bbox["loss_pseudo_class"] = pseudo_loss
+        loss_bbox["loss_pseudo_class"] = self.pseudo_label_loss_weight * pseudo_loss
         bbox_results.update(loss_bbox=loss_bbox)
         return bbox_results
 
