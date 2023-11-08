@@ -2,7 +2,7 @@ _base_ = "./oln_vos_mask_db6_kmeans_5.py"
 
 model = dict(
     roi_head=dict(
-        start_epoch=5,
+        start_epoch=12,
     )
 )
 optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
