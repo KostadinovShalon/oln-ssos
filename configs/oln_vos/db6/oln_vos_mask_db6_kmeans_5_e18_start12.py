@@ -11,7 +11,7 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=100,
     warmup_ratio=0.001,
-    step=[12, 16])
+    step=[11, 16])
 total_epochs = 18
 #
 # Runner type
