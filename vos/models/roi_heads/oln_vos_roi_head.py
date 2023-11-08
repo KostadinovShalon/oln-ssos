@@ -257,7 +257,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                     ood_reg_loss = F.binary_cross_entropy_with_logits(
                         output.view(-1), labels_for_loss)
 
-        return ood_reg_loss, loss_pseudo_scorqqqqqqqqqqqqqqqqqe
+        return ood_reg_loss, loss_pseudo_score
 
     def simple_test_bboxes(self,
                            x,
