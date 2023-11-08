@@ -14,6 +14,5 @@ lr_config = dict(
     step=[12, 16])
 total_epochs = 18
 #
-load_from = None
 # Runner type
 runner = dict(type='PseudoLabelEpochBasedRunner')
