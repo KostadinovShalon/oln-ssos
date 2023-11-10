@@ -241,6 +241,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
     def _ood_forward_train(self, bbox_results, bbox_targets, device):
         selected_fg_samples = (bbox_targets[0] != self.k).nonzero().view(-1)
         indices_numpy = selected_fg_samples.cpu().numpy().astype(int)
+        gt_classes_numpy = bbox_targets[0].cpu().numpy().astype(int)
 
         gt_box_features = []
         for index in indices_numpy:
@@ -267,14 +268,14 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
             if not queue_ready:
                 for index in indices_numpy:
                     fts = bbox_results['shared_bbox_feats'][index].detach()
-                    dict_key = self.kmeans.predict(fts.cpu().view(1, -1)).item()
+                    dict_key = gt_classes_numpy[index]
                     if self.number_dict[dict_key] < self.vos_samples_per_class:
                         self.data_dict[dict_key][self.number_dict[dict_key]] = fts
                         self.number_dict[dict_key] += 1
             else:
                 for index in indices_numpy:
                     fts = bbox_results['shared_bbox_feats'][index].detach()
-                    dict_key = self.kmeans.predict(fts.cpu().view(1, -1)).item()
+                    dict_key = gt_classes_numpy[index]
                     self.data_dict[dict_key] = torch.cat((self.data_dict[dict_key][1:],
                                                           fts.view(1, -1)), 0)
                 if self.epoch >= self.start_epoch:
