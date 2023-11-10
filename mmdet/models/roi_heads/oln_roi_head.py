@@ -162,7 +162,7 @@ class MaskScoringOlnRoIHead(OlnRoIHead):
                             img_metas):
         """Run forward function and calculate loss for Mask head in
         training."""
-        pos_labels = torch.cat([res.pos_gt_labels for res in sampling_results])
+        pos_labels = torch.cat([res.pos_gt_labels for res in sampling_results]) * 0
         mask_results = super(MaskScoringOlnRoIHead,
                              self)._mask_forward_train(x, sampling_results,
                                                        bbox_feats, gt_masks,

@@ -90,6 +90,7 @@ def parse_args():
         default='none',
         help='job launcher')
     parser.add_argument('--local_rank', type=int, default=0)
+    parser.add_argument('--use-wandb', action='store_true')
     args = parser.parse_args()
     if 'LOCAL_RANK' not in os.environ:
         os.environ['LOCAL_RANK'] = str(args.local_rank)
@@ -234,7 +235,7 @@ def main():
             # ood_json_results = datasets['ood']._segm2json(results['ood'])
         if args.mode == 'ood':
             results = [r for r in results if r['score'] > optimal_score_threshold
-                               and r['ood_score'] > anomaly_score_threshold]
+                               and r['ood_score'] < anomaly_score_threshold]
 
         gt_coco_api = COCO(cfg.data.test.ann_file)
         res_coco_api = gt_coco_api.loadRes(results)

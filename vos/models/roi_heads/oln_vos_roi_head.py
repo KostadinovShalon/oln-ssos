@@ -40,9 +40,11 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
     def __init__(self,
                  start_epoch=0,
                  logistic_regression_hidden_dim=512,
+                 vos_samples_per_class=1000,
                  negative_sampling_size=10000,
                  bottomk_epsilon_dist=1,
                  ood_loss_weight=0.1,
+                 pseudo_label_loss_weight=1.0,
                  k=5,
                  recalculate_pseudolabels_every_epoch=1,
                  k_means_minibatch=True,
@@ -64,6 +66,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
             ood_loss_weight: uncertainty loss weight
         """
         super(OLNKMeansVOSRoIHead, self).__init__(*args, **kwargs)
+        self.vos_samples_per_class = vos_samples_per_class
         self.start_epoch = start_epoch
         self.bottomk_epsilon_dist = bottomk_epsilon_dist
         self.negative_sampling_size = negative_sampling_size
@@ -82,17 +85,16 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
         self.epoch = 0
 
-        self.data_list = []
+        self.data_dict = torch.zeros(self.k, self.vos_samples_per_class, 1024).cuda()
+        self.number_dict = {}
+        for i in range(self.k):
+            self.number_dict[i] = 0
 
-        self.samples_for_covariance = 20 * 1024
+        # self.samples_for_covariance = 20 * 1024
         self.ft_minibatches = []
-        self.k_means_batches_to_restart = 20
-        self.kmeans_minibatches_passed = 0
 
         self.pseudo_score = nn.Sequential(
             nn.Linear(1024, 512),
-            nn.ReLU(),
-            nn.Linear(512, 512),
             nn.ReLU(),
             nn.Linear(512, self.k)
         )
@@ -106,11 +108,77 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.cov = None
         self.kmeans = None
 
-        self.loss_pseudo_cls = build_loss(dict(
-                     type='CrossEntropyLoss',
-                     use_sigmoid=False,
-                     loss_weight=self.ood_loss_weight))
+        self.loss_pseudo_cls = torch.nn.CrossEntropyLoss()
         self.use_all_proposals_ood = use_all_proposals_ood
+
+        self.post_epoch_features = []
+        self.pseudo_label_loss_weight = pseudo_label_loss_weight
+        self.bbox_head.num_classes = self.k
+
+    def forward_train(self,
+                      x,
+                      img_metas,
+                      proposal_list,
+                      gt_bboxes,
+                      gt_labels,
+                      gt_bboxes_ignore=None,
+                      gt_masks=None,
+                      gt_ann_ids=None,
+                      gt_pseudo_labels=None):
+        """
+        Args:
+            x (list[Tensor]): list of multi-level img features.
+            img_metas (list[dict]): list of image info dict where each dict
+                has: 'img_shape', 'scale_factor', 'flip', and may also contain
+                'filename', 'ori_shape', 'pad_shape', and 'img_norm_cfg'.
+                For details on the values of these keys see
+                `mmdet/datasets/pipelines/formatting.py:Collect`.
+            proposals (list[Tensors]): list of region proposals.
+            gt_bboxes (list[Tensor]): Ground truth bboxes for each image with
+                shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
+            gt_labels (list[Tensor]): class indices corresponding to each box
+            gt_bboxes_ignore (None | list[Tensor]): specify which bounding
+                boxes can be ignored when computing the loss.
+            gt_masks (None | Tensor) : true segmentation masks for each box
+                used if the architecture supports a segmentation task.
+
+        Returns:
+            dict[str, Tensor]: a dictionary of loss components
+        """
+        # assign gts and sample proposals
+        if self.with_bbox or self.with_mask:
+            num_imgs = len(img_metas)
+            if gt_bboxes_ignore is None:
+                gt_bboxes_ignore = [None for _ in range(num_imgs)]
+            sampling_results = []
+            for i in range(num_imgs):
+                assign_result = self.bbox_assigner.assign(
+                    proposal_list[i], gt_bboxes[i], gt_bboxes_ignore[i],
+                    gt_pseudo_labels[i])
+                sampling_result = self.bbox_sampler.sample(
+                    assign_result,
+                    proposal_list[i],
+                    gt_bboxes[i],
+                    gt_pseudo_labels[i],
+                    feats=[lvl_feat[i][None] for lvl_feat in x])
+                sampling_results.append(sampling_result)
+
+        losses = dict()
+        # bbox head forward and loss
+        if self.with_bbox:
+            bbox_results = self._bbox_forward_train(x, sampling_results,
+                                                    gt_bboxes, gt_pseudo_labels,
+                                                    img_metas)
+            losses.update(bbox_results['loss_bbox'])
+
+        # mask head forward and loss
+        if self.with_mask:
+            mask_results = self._mask_forward_train(x, sampling_results,
+                                                    bbox_results['bbox_feats'],
+                                                    gt_masks, img_metas)
+            losses.update(mask_results['loss_mask'])
+
+        return losses
 
     def _bbox_forward(self, x, rois):
         """Box head forward function used in both training and testing."""
@@ -135,7 +203,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
         bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                   gt_labels, self.train_cfg)
-        loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
+        loss_bbox = self.bbox_head.loss(None,
                                         bbox_results['bbox_pred'],
                                         bbox_results['bbox_score'],
                                         rois,
@@ -143,113 +211,119 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         # VOS STARTS HERE
         ood_loss, pseudo_loss = self._ood_forward_train(bbox_results, bbox_targets, device=x[0].device)
         loss_bbox["loss_ood"] = self.ood_loss_weight * ood_loss
-        loss_bbox["loss_pseudo_class"] = pseudo_loss
+        loss_bbox["loss_pseudo_class"] = self.pseudo_label_loss_weight * pseudo_loss
         bbox_results.update(loss_bbox=loss_bbox)
         return bbox_results
 
-    def run_pseudo_label_iter(self, x):
-        print(x)
+    def accumulate_pseudo_labels(self, fts, rois):
+        bbox_feats = self.bbox_roi_extractor(
+            fts[:self.bbox_roi_extractor.num_inputs], rois)
+        if self.with_shared_head:
+            bbox_feats = self.shared_head(bbox_feats)
+        _, _, _, shared_fts = self.bbox_head(bbox_feats)
+        self.post_epoch_features.append(shared_fts)
+
+    def calculate_pseudo_labels(self):
+        fts = torch.cat(self.post_epoch_features, dim=0)
+        if self.means is None:
+            self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
+        else:
+            self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
+                                          init=self.kmeans.cluster_centers_)
+        labels = self.kmeans.fit_predict(fts.cpu())
+        self.means = torch.tensor(self.kmeans.cluster_centers_).to(fts.device).detach()
+        self.post_epoch_features = []
+        total_samples = sum(self.kmeans.counts_)
+        cw = total_samples / (self.k * self.kmeans.counts_)
+        self.loss_pseudo_cls = torch.nn.CrossEntropyLoss(weight=torch.tensor(cw, dtype=torch.float32, device=fts.device))
+        return labels
 
     def _ood_forward_train(self, bbox_results, bbox_targets, device):
-        n_classes = bbox_results['cls_score'].shape[1]
-        selected_fg_samples = (bbox_targets[0] != n_classes - 1).nonzero().view(-1)
+        selected_fg_samples = (bbox_targets[0] != self.k).nonzero().view(-1)
         indices_numpy = selected_fg_samples.cpu().numpy().astype(int)
 
         gt_box_features = []
         for index in indices_numpy:
             gt_box_features.append(bbox_results['shared_bbox_feats'][index].view(1, -1))
-            self.data_list.append(bbox_results['shared_bbox_feats'][index].detach().view(1, -1))
-            self.ft_minibatches.append(bbox_results['shared_bbox_feats'][index].detach().view(1, -1))
         gt_box_features = torch.cat(gt_box_features, dim=0)
-        if len(self.data_list) > self.samples_for_covariance:
-            self.data_list = self.data_list[-self.samples_for_covariance:]
-
-        if self.k_means_minibatch:
-            if len(self.ft_minibatches) >= 1024:
-                if self.kmeans is None:
-                    self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
-                elif self.kmeans_minibatches_passed >= self.k_means_batches_to_restart:
-                    self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
-                                                  init=self.kmeans.cluster_centers_)
-                    self.kmeans_minibatches_passed = 0
-                self.kmeans = self.kmeans.partial_fit(
-                    torch.cat(self.ft_minibatches[-1024:], dim=0).cpu()
-                )
-                self.kmeans_minibatches_passed += 1
-                self.ft_minibatches = []
-                self.means = torch.tensor(self.kmeans.cluster_centers_).to(
-                    self.data_list[0].device).detach()
-
-        elif self.epoch % self.recalculate_pseudolabels_every_epoch == 0 and self.epoch > 0 and len(self.data_list) > 0:
-            self.kmeans = KMeans(n_clusters=self.k, n_init="auto") \
-                .fit(torch.cat(self.data_list, dim=0).cpu())
-            self.means = torch.tensor(self.kmeans.cluster_centers_).to(self.data_list[0].device).detach()
-
-        if self.means is not None and len(self.data_list) >= self.samples_for_covariance:
-            data_tensor = torch.cat(self.data_list, dim=0)
-            X = []
-            data_labels = self.kmeans.predict(data_tensor.cpu()) if self.k_means_minibatch \
-                else self.kmeans.labels_
-            for i, mean in enumerate(self.means):
-                label_idx = data_labels == i
-                label_idx = torch.tensor(label_idx).to(data_tensor.device)
-                X.append(data_tensor[label_idx] - mean)
-            X = torch.cat(X, dim=0).detach()
-            # add the variance.
-            self.cov = torch.mm(X.t(), X) / len(X)
-            # for stable training.
-            self.cov += 0.0001 * torch.eye(self.bbox_head.fc_out_channels, device=device)
-            if not self.k_means_minibatch:
-                self.data_list = []
 
         ood_reg_loss = torch.zeros(1).to(device)
         loss_pseudo_score = torch.zeros(1).cuda()
-        ood_samples = []
-        if self.kmeans is not None and self.kmeans_minibatches_passed > 10:
+        if self.kmeans is not None:
             if not self.use_all_proposals_ood:
-                gt_pseudo_labels = self.kmeans.predict(gt_box_features.detach().cpu())
+                # gt_pseudo_labels = self.kmeans.predict(gt_box_features.detach().cpu())
                 gt_pseudo_logits = self.pseudo_score(gt_box_features)
             else:
-                gt_pseudo_labels = self.kmeans.predict(bbox_results['shared_bbox_feats'].detach().cpu())
+                # gt_pseudo_labels = self.kmeans.predict(bbox_results['shared_bbox_feats'].detach().cpu())
                 gt_pseudo_logits = self.pseudo_score(bbox_results['shared_bbox_feats'])
-            gt_pseudo_labels = torch.tensor(gt_pseudo_labels).to(gt_box_features.device)
-            total_samples = sum(self.kmeans.counts_)
-            cw = total_samples / (self.k * self.kmeans.counts_)
-            self.loss_pseudo_cls.class_weight = cw
+            gt_pseudo_labels = bbox_targets[0][selected_fg_samples]
             loss_pseudo_score = self.loss_pseudo_cls(gt_pseudo_logits, gt_pseudo_labels.long())
 
-            if self.epoch >= self.start_epoch and self.cov is not None:
-                for i, mean in enumerate(self.means):
-                    new_dis = torch.distributions.multivariate_normal.MultivariateNormal(
-                        mean, covariance_matrix=self.cov)
-                    repeat_factor = 10 if self.use_all_proposals_ood else 1
-                    for _ in range(self.repeat_ood_sampling * repeat_factor):
-                        negative_samples = new_dis.rsample((self.negative_sampling_size,))
-                        prob_density = new_dis.log_prob(negative_samples)
 
-                        # keep the data in the low density area.
-                        cur_samples, index_prob = torch.topk(- prob_density, self.bottomk_epsilon_dist)
-                        ood_samples.append(negative_samples[index_prob])
+            sum_temp = 0
+            for index in range(self.k):
+                sum_temp += self.number_dict[index]
+            queue_ready = sum_temp >= self.k * self.vos_samples_per_class
+            if not queue_ready:
+                for index in indices_numpy:
+                    fts = bbox_results['shared_bbox_feats'][index].detach()
+                    dict_key = self.kmeans.predict(fts.cpu().view(1, -1)).item()
+                    if self.number_dict[dict_key] < self.vos_samples_per_class:
+                        self.data_dict[dict_key][self.number_dict[dict_key]] = fts
+                        self.number_dict[dict_key] += 1
+            else:
+                for index in indices_numpy:
+                    fts = bbox_results['shared_bbox_feats'][index].detach()
+                    dict_key = self.kmeans.predict(fts.cpu().view(1, -1)).item()
+                    self.data_dict[dict_key] = torch.cat((self.data_dict[dict_key][1:],
+                                                          fts.view(1, -1)), 0)
+                if self.epoch >= self.start_epoch:
+                    for index in range(self.k):
+                        if index == 0:
+                            X = self.data_dict[index] - self.data_dict[index].mean(0)
+                            mean_embed_id = self.data_dict[index].mean(0).view(1, -1)
+                        else:
+                            X = torch.cat((X, self.data_dict[index] - self.data_dict[index].mean(0)), 0)
+                            mean_embed_id = torch.cat((mean_embed_id,
+                                                       self.data_dict[index].mean(0).view(1, -1)), 0)
+
+                    # add the variance.
+                    temp_precision = torch.mm(X.t(), X) / len(X)
+                    # for stable training.
+                    temp_precision += 0.0001 * torch.eye(self.bbox_head.fc_out_channels, device=device)
+                    ood_samples = None
+                    for index in range(self.k):
+                        new_dis = torch.distributions.multivariate_normal.MultivariateNormal(
+                            mean_embed_id[index], covariance_matrix=temp_precision)
+                        for _ in range(self.repeat_ood_sampling):
+                            negative_samples = new_dis.rsample((self.negative_sampling_size,))
+                            prob_density = new_dis.log_prob(negative_samples)
+
+                            # keep the data in the low density area.
+                            cur_samples, index_prob = torch.topk(- prob_density, self.bottomk_epsilon_dist)
+                            if ood_samples is None:
+                                ood_samples = negative_samples[index_prob]
+                            else:
+                                ood_samples = torch.cat((ood_samples, negative_samples[index_prob]), 0)
+                        del new_dis
                         del negative_samples
-                    del new_dis
-                ood_samples = torch.cat(ood_samples, dim=0).to(torch.float32)
 
-                energy_score_for_fg = torch.logsumexp(gt_pseudo_logits, 1)
+                    energy_score_for_fg = torch.logsumexp(gt_pseudo_logits, 1)
 
-                # Now we need to get the class logits for the negative samples.
-                predictions_ood = self.pseudo_score(ood_samples)
-                energy_score_for_bg = torch.logsumexp(predictions_ood, 1)
+                    # Now we need to get the class logits for the negative samples.
+                    predictions_ood = self.pseudo_score(ood_samples)
+                    energy_score_for_bg = torch.logsumexp(predictions_ood, 1)
 
-                input_for_loss = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
-                id_labels_size = len(selected_fg_samples) if not self.use_all_proposals_ood else \
-                    len(bbox_results['shared_bbox_feats'])
-                labels_for_loss = torch.cat((torch.ones(id_labels_size).to(device),
-                                           torch.zeros(len(ood_samples)).to(device)), -1)
+                    input_for_loss = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
+                    id_labels_size = len(selected_fg_samples) if not self.use_all_proposals_ood else \
+                        len(bbox_results['shared_bbox_feats'])
+                    labels_for_loss = torch.cat((torch.ones(id_labels_size).to(device),
+                                                 torch.zeros(len(ood_samples)).to(device)), -1)
 
-                output = self.logistic_regression_layer(input_for_loss.view(-1, 1))
-                ood_reg_loss = F.binary_cross_entropy_with_logits(
-                    output.view(-1), labels_for_loss
-                    , pos_weight=torch.tensor(len(ood_samples)/len(selected_fg_samples)).cuda())
+                    output = self.logistic_regression_layer(input_for_loss.view(-1, 1))
+                    ood_reg_loss = F.binary_cross_entropy_with_logits(
+                        output.view(-1), labels_for_loss)
+
         return ood_reg_loss, loss_pseudo_score
 
     def simple_test_bboxes(self,
