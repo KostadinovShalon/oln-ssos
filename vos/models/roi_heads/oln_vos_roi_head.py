@@ -113,6 +113,72 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
         self.post_epoch_features = []
         self.pseudo_label_loss_weight = pseudo_label_loss_weight
+        self.bbox_head.num_classes = self.k
+
+    def forward_train(self,
+                      x,
+                      img_metas,
+                      proposal_list,
+                      gt_bboxes,
+                      gt_labels,
+                      gt_bboxes_ignore=None,
+                      gt_masks=None,
+                      gt_ann_ids=None,
+                      gt_pseudo_labels=None):
+        """
+        Args:
+            x (list[Tensor]): list of multi-level img features.
+            img_metas (list[dict]): list of image info dict where each dict
+                has: 'img_shape', 'scale_factor', 'flip', and may also contain
+                'filename', 'ori_shape', 'pad_shape', and 'img_norm_cfg'.
+                For details on the values of these keys see
+                `mmdet/datasets/pipelines/formatting.py:Collect`.
+            proposals (list[Tensors]): list of region proposals.
+            gt_bboxes (list[Tensor]): Ground truth bboxes for each image with
+                shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
+            gt_labels (list[Tensor]): class indices corresponding to each box
+            gt_bboxes_ignore (None | list[Tensor]): specify which bounding
+                boxes can be ignored when computing the loss.
+            gt_masks (None | Tensor) : true segmentation masks for each box
+                used if the architecture supports a segmentation task.
+
+        Returns:
+            dict[str, Tensor]: a dictionary of loss components
+        """
+        # assign gts and sample proposals
+        if self.with_bbox or self.with_mask:
+            num_imgs = len(img_metas)
+            if gt_bboxes_ignore is None:
+                gt_bboxes_ignore = [None for _ in range(num_imgs)]
+            sampling_results = []
+            for i in range(num_imgs):
+                assign_result = self.bbox_assigner.assign(
+                    proposal_list[i], gt_bboxes[i], gt_bboxes_ignore[i],
+                    gt_pseudo_labels[i])
+                sampling_result = self.bbox_sampler.sample(
+                    assign_result,
+                    proposal_list[i],
+                    gt_bboxes[i],
+                    gt_pseudo_labels[i],
+                    feats=[lvl_feat[i][None] for lvl_feat in x])
+                sampling_results.append(sampling_result)
+
+        losses = dict()
+        # bbox head forward and loss
+        if self.with_bbox:
+            bbox_results = self._bbox_forward_train(x, sampling_results,
+                                                    gt_bboxes, gt_pseudo_labels,
+                                                    img_metas)
+            losses.update(bbox_results['loss_bbox'])
+
+        # mask head forward and loss
+        if self.with_mask:
+            mask_results = self._mask_forward_train(x, sampling_results,
+                                                    bbox_results['bbox_feats'],
+                                                    gt_masks, img_metas)
+            losses.update(mask_results['loss_mask'])
+
+        return losses
 
     def _bbox_forward(self, x, rois):
         """Box head forward function used in both training and testing."""
@@ -137,7 +203,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
         bbox_targets = self.bbox_head.get_targets(sampling_results, gt_bboxes,
                                                   gt_labels, self.train_cfg)
-        loss_bbox = self.bbox_head.loss(bbox_results['cls_score'],
+        loss_bbox = self.bbox_head.loss(None,
                                         bbox_results['bbox_pred'],
                                         bbox_results['bbox_score'],
                                         rois,
@@ -160,19 +226,20 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
     def calculate_pseudo_labels(self):
         fts = torch.cat(self.post_epoch_features, dim=0)
         if self.means is None:
-            self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024).fit(fts.cpu())
+            self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
         else:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
-                                          init=self.kmeans.cluster_centers_).fit(fts.cpu())
+                                          init=self.kmeans.cluster_centers_)
+        labels = self.kmeans.fit_predict(fts.cpu())
         self.means = torch.tensor(self.kmeans.cluster_centers_).to(fts.device).detach()
         self.post_epoch_features = []
         total_samples = sum(self.kmeans.counts_)
         cw = total_samples / (self.k * self.kmeans.counts_)
         self.loss_pseudo_cls = torch.nn.CrossEntropyLoss(weight=torch.tensor(cw, dtype=torch.float32, device=fts.device))
+        return labels
 
     def _ood_forward_train(self, bbox_results, bbox_targets, device):
-        n_classes = bbox_results['cls_score'].shape[1]
-        selected_fg_samples = (bbox_targets[0] != n_classes - 1).nonzero().view(-1)
+        selected_fg_samples = (bbox_targets[0] != self.k).nonzero().view(-1)
         indices_numpy = selected_fg_samples.cpu().numpy().astype(int)
 
         gt_box_features = []
@@ -184,12 +251,12 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         loss_pseudo_score = torch.zeros(1).cuda()
         if self.kmeans is not None:
             if not self.use_all_proposals_ood:
-                gt_pseudo_labels = self.kmeans.predict(gt_box_features.detach().cpu())
+                # gt_pseudo_labels = self.kmeans.predict(gt_box_features.detach().cpu())
                 gt_pseudo_logits = self.pseudo_score(gt_box_features)
             else:
-                gt_pseudo_labels = self.kmeans.predict(bbox_results['shared_bbox_feats'].detach().cpu())
+                # gt_pseudo_labels = self.kmeans.predict(bbox_results['shared_bbox_feats'].detach().cpu())
                 gt_pseudo_logits = self.pseudo_score(bbox_results['shared_bbox_feats'])
-            gt_pseudo_labels = torch.tensor(gt_pseudo_labels).to(gt_box_features.device)
+            gt_pseudo_labels = bbox_targets[0][selected_fg_samples]
             loss_pseudo_score = self.loss_pseudo_cls(gt_pseudo_logits, gt_pseudo_labels.long())
 
 

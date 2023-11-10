@@ -30,9 +30,15 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
 
     def run_pseudo_label_epoch(self):
         with torch.no_grad():
+            ann_ids = []
             for i, data_batch in enumerate(tqdm.tqdm(self.data_loader)):
                 inputs, kwargs = self.model.scatter(data_batch, {}, self.model.device_ids)
                 fts = self.model.module.extract_feat(inputs[0]['img'])
                 rois = bbox2roi([b for b in inputs[0]['gt_bboxes']])
+                ann_ids.extend(inputs[0]['gt_ann_ids'])
                 self.model.module.roi_head.accumulate_pseudo_labels(fts, rois)
-            self.model.module.roi_head.calculate_pseudo_labels()
+            labels = self.model.module.roi_head.calculate_pseudo_labels()
+            ann_ids = torch.cat(ann_ids).cpu().numpy()
+
+            for ann_id, label in zip(ann_ids, labels):
+                self.data_loader.dataset.coco.anns[ann_id]['pseudo_class'] = label

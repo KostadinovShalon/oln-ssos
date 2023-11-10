@@ -72,6 +72,7 @@ model = dict(
             in_channels=256,
             conv_out_channels=256,
             num_classes=1,
+            class_agnostic=True,
             loss_mask=dict(
                 type='CrossEntropyLoss', use_mask=True, loss_weight=1.0)),
         mask_iou_head=dict(

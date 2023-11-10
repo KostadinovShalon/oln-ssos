@@ -1,5 +1,5 @@
 _base_ = ['../../oln_mask/oln_mask_model.py',
-          '../../_base_/datasets/db6_split_instance.py',
+          '../../_base_/datasets/db6_split_instance_ann_id.py',
           '../../_base_/schedules/schedule_1x.py',
           '../../_base_/default_runtime.py'
           ]
@@ -9,7 +9,8 @@ custom_imports = dict(
         'vos.models.roi_heads.oln_mask_vos_roi_head',
         'vos.models.detectors.epoch_faster_rcnn',
         'vos.models.roi_heads.bbox_heads.oln_vos_bbox_head',
-        'vos.datasets.vos_coco'
+        'vos.datasets.vos_coco',
+        'vos.datasets.pipelines.loading'
     ],
     allow_failed_imports=False)
 
@@ -27,7 +28,8 @@ model = dict(
         repeat_ood_sampling=4,
         use_all_proposals_ood=False,
         bbox_head=dict(
-            type='VOSShared2FCBBoxScoreHead'))
+            type='VOSShared2FCBBoxScoreHead',
+        reg_class_agnostic=True))
     )
 
 checkpoint_config = dict(interval=1)

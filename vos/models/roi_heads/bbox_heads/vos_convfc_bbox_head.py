@@ -86,7 +86,7 @@ def multiclass_nms_with_ood(multi_bboxes,
               (labels.max() + 1) * (1 - id_indices.to(torch.int8).cpu())
     dets, keep = batched_nms(bboxes,
                              scores,
-                             labels,
+                             _labels,
                              nms_cfg)
     # if len(bboxes[id_indices]) > 0:
     #     id_dets, id_keep = batched_nms(bboxes[id_indices],
