@@ -1,6 +1,7 @@
 import torch
 from mmcv.runner import force_fp32
 
+from mmdet.core import multi_apply, multiclass_nms
 from mmdet.models import HEADS
 from mmdet.models.roi_heads.bbox_heads import Shared2FCBBoxScoreHead
 from vos.models.roi_heads.bbox_heads.vos_convfc_bbox_head import multiclass_nms_with_ood
@@ -50,7 +51,8 @@ class VOSShared2FCBBoxScoreHead(Shared2FCBBoxScoreHead):
                    img_shape,
                    scale_factor,
                    rescale=False,
-                   cfg=None):
+                   cfg=None,
+                   with_ood=True):
         if isinstance(cls_score, list):
             cls_score = sum(cls_score) / float(len(cls_score))
         # cls_score is not used.
@@ -82,13 +84,23 @@ class VOSShared2FCBBoxScoreHead(Shared2FCBBoxScoreHead):
         # Concat dummy zero-scores for the background class.
         scores = torch.cat([scores, torch.zeros_like(scores)], dim=-1)
 
-        if cfg is None:
-            return bboxes, scores, ood_scores
-        else:
-            det_bboxes, det_labels, det_ood_scores, _ = multiclass_nms_with_ood(bboxes, scores, ood_scores,
-                                                                                None,
-                                                                                cfg.score_thr, cfg.nms,
-                                                                                cfg.max_per_img,
-                                                                                ood_score_threshold=self.ood_score_threshold)
+        if with_ood:
+            if cfg is None:
+                return bboxes, scores, ood_scores
+            else:
+                det_bboxes, det_labels, det_ood_scores, _ = multiclass_nms_with_ood(bboxes, scores,
+                                                                                    ood_scores,
+                                                                                    None,
+                                                                                    cfg.score_thr, cfg.nms,
+                                                                                    cfg.max_per_img)
 
-            return det_bboxes, det_labels, det_ood_scores
+                return det_bboxes, det_labels, det_ood_scores
+        else:
+            if cfg is None:
+                return bboxes, scores, None
+            else:
+                det_bboxes, det_labels = multiclass_nms(bboxes, scores,
+                                                              cfg.score_thr, cfg.nms,
+                                                              cfg.max_per_img)
+
+                return det_bboxes, det_labels, None

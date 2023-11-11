@@ -1,12 +1,14 @@
+import warnings
+
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from sklearn.cluster import MiniBatchKMeans, KMeans
+from sklearn.cluster import MiniBatchKMeans
 
-from mmdet.core import bbox2roi
-from mmdet.models import HEADS, OlnRoIHead, build_loss
-import warnings
+from mmdet.core import bbox2roi, bbox2result
+from mmdet.models import HEADS, OlnRoIHead
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
@@ -50,6 +52,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                  k_means_minibatch=True,
                  repeat_ood_sampling=4,
                  use_all_proposals_ood=False,
+                 weak_bbox_test_confidence=0.5,
                  *args,
                  **kwargs):
         """
@@ -71,6 +74,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.bottomk_epsilon_dist = bottomk_epsilon_dist
         self.negative_sampling_size = negative_sampling_size
         self.ood_loss_weight = ood_loss_weight
+        self.weak_bbox_test_confidence = weak_bbox_test_confidence
 
         self.k = k
         self.recalculate_pseudolabels_every_epoch = recalculate_pseudolabels_every_epoch
@@ -112,6 +116,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.use_all_proposals_ood = use_all_proposals_ood
 
         self.post_epoch_features = []
+        self.post_epoch_weak_features = []
         self.pseudo_label_loss_weight = pseudo_label_loss_weight
         self.bbox_head.num_classes = self.k
 
@@ -124,7 +129,9 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                       gt_bboxes_ignore=None,
                       gt_masks=None,
                       gt_ann_ids=None,
-                      gt_pseudo_labels=None):
+                      gt_pseudo_labels=None,
+                      gt_weak_bboxes=None,
+                      gt_weak_bboxes_labels=None):
         """
         Args:
             x (list[Tensor]): list of multi-level img features.
@@ -133,7 +140,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 'filename', 'ori_shape', 'pad_shape', and 'img_norm_cfg'.
                 For details on the values of these keys see
                 `mmdet/datasets/pipelines/formatting.py:Collect`.
-            proposals (list[Tensors]): list of region proposals.
+            proposal_list (list[Tensors]): list of region proposals.
             gt_bboxes (list[Tensor]): Ground truth bboxes for each image with
                 shape (num_gts, 4) in [tl_x, tl_y, br_x, br_y] format.
             gt_labels (list[Tensor]): class indices corresponding to each box
@@ -141,16 +148,21 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 boxes can be ignored when computing the loss.
             gt_masks (None | Tensor) : true segmentation masks for each box
                 used if the architecture supports a segmentation task.
+            gt_ann_ids (None | Tensor) : .
+            gt_pseudo_labels (None | Tensor) : .
+            gt_weak_bboxes (None | Tensor) : .
+            gt_weak_bboxes_labels (None | Tensor) : .
 
         Returns:
             dict[str, Tensor]: a dictionary of loss components
         """
         # assign gts and sample proposals
+        sampling_results = []
+        sampling_weak_results = []
         if self.with_bbox or self.with_mask:
             num_imgs = len(img_metas)
             if gt_bboxes_ignore is None:
                 gt_bboxes_ignore = [None for _ in range(num_imgs)]
-            sampling_results = []
             for i in range(num_imgs):
                 assign_result = self.bbox_assigner.assign(
                     proposal_list[i], gt_bboxes[i], gt_bboxes_ignore[i],
@@ -162,21 +174,35 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                     gt_pseudo_labels[i],
                     feats=[lvl_feat[i][None] for lvl_feat in x])
                 sampling_results.append(sampling_result)
+                if gt_weak_bboxes:
+                    weak_assign_results = self.bbox_assigner.assign(
+                        proposal_list[i], gt_weak_bboxes[i], None,
+                        gt_weak_bboxes_labels[i])
+                    weak_sampling_result = self.bbox_sampler.sample(
+                        weak_assign_results,
+                        proposal_list[i],
+                        gt_weak_bboxes[i],
+                        gt_weak_bboxes_labels[i],
+                        feats=[lvl_feat[i][None] for lvl_feat in x])
+                    sampling_weak_results.append(weak_sampling_result)
 
         losses = dict()
         # bbox head forward and loss
         if self.with_bbox:
             bbox_results = self._bbox_forward_train(x, sampling_results,
                                                     gt_bboxes, gt_pseudo_labels,
-                                                    img_metas)
+                                                    img_metas,
+                                                    sampling_weak_results,
+                                                    gt_weak_bboxes,
+                                                    gt_weak_bboxes_labels)
             losses.update(bbox_results['loss_bbox'])
 
         # mask head forward and loss
-        if self.with_mask:
-            mask_results = self._mask_forward_train(x, sampling_results,
-                                                    bbox_results['bbox_feats'],
-                                                    gt_masks, img_metas)
-            losses.update(mask_results['loss_mask'])
+            if self.with_mask:
+                mask_results = self._mask_forward_train(x, sampling_results,
+                                                        bbox_results['bbox_feats'],
+                                                        gt_masks, img_metas)
+                losses.update(mask_results['loss_mask'])
 
         return losses
 
@@ -196,7 +222,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         return bbox_results
 
     def _bbox_forward_train(self, x, sampling_results, gt_bboxes, gt_labels,
-                            img_metas):
+                            img_metas, sampling_weak_results=None, gt_weak_bboxes=None, gt_weak_pseudo_labels=None):
         """Run forward function and calculate loss for box head in training."""
         rois = bbox2roi([res.bboxes for res in sampling_results])
         bbox_results = self._bbox_forward(x, rois)
@@ -208,8 +234,18 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                                         bbox_results['bbox_score'],
                                         rois,
                                         *bbox_targets)
+        if sampling_weak_results is not None and len(sampling_weak_results) > 0:
+            weak_rois = bbox2roi([res.bboxes for res in sampling_weak_results])
+            bbox_weak_results = self._bbox_forward(x, weak_rois)
+            bbox_weak_targets = self.bbox_head.get_targets(sampling_weak_results,
+                                                           gt_weak_bboxes, gt_weak_pseudo_labels, self.train_cfg)
+        else:
+            bbox_weak_results = None
+            bbox_weak_targets = None
         # VOS STARTS HERE
-        ood_loss, pseudo_loss = self._ood_forward_train(bbox_results, bbox_targets, device=x[0].device)
+        ood_loss, pseudo_loss = self._ood_forward_train(bbox_results, bbox_targets, bbox_weak_results,
+                                                        bbox_weak_targets,
+                                                        device=x[0].device)
         loss_bbox["loss_ood"] = self.ood_loss_weight * ood_loss
         loss_bbox["loss_pseudo_class"] = self.pseudo_label_loss_weight * pseudo_loss
         bbox_results.update(loss_bbox=loss_bbox)
@@ -223,25 +259,52 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         _, _, _, shared_fts = self.bbox_head(bbox_feats)
         self.post_epoch_features.append(shared_fts)
 
+    def accumulate_weak_pseudo_labels(self, fts, rois):
+        bbox_feats = self.bbox_roi_extractor(
+            fts[:self.bbox_roi_extractor.num_inputs], rois)
+        if self.with_shared_head:
+            bbox_feats = self.shared_head(bbox_feats)
+        _, _, _, shared_fts = self.bbox_head(bbox_feats)
+        self.post_epoch_weak_features.append(shared_fts)
+
     def calculate_pseudo_labels(self):
         fts = torch.cat(self.post_epoch_features, dim=0)
+        weak_fts = torch.cat(self.post_epoch_weak_features, dim=0)
+        total_fts = torch.cat([fts, weak_fts], dim=0)
         if self.means is None:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
         else:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
                                           init=self.kmeans.cluster_centers_)
-        labels = self.kmeans.fit_predict(fts.cpu())
-        self.means = torch.tensor(self.kmeans.cluster_centers_).to(fts.device).detach()
+        labels = self.kmeans.fit_predict(total_fts.cpu())
+        self.means = torch.tensor(self.kmeans.cluster_centers_).to(total_fts.device).detach()
         self.post_epoch_features = []
         total_samples = sum(self.kmeans.counts_)
         cw = total_samples / (self.k * self.kmeans.counts_)
         self.loss_pseudo_cls = torch.nn.CrossEntropyLoss(weight=torch.tensor(cw, dtype=torch.float32, device=fts.device))
         return labels
 
-    def _ood_forward_train(self, bbox_results, bbox_targets, device):
+    def _ood_forward_train(self, bbox_results, bbox_targets, bbox_weak_results, bbox_weak_targets, device):
         selected_fg_samples = (bbox_targets[0] != self.k).nonzero().view(-1)
         indices_numpy = selected_fg_samples.cpu().numpy().astype(int)
         gt_classes_numpy = bbox_targets[0].cpu().numpy().astype(int)
+
+        if bbox_weak_results is not None:
+            weak_selected_fg_samples = (bbox_weak_targets[0] != self.k).nonzero().view(-1)
+            weak_indices_numpy = weak_selected_fg_samples.cpu().numpy().astype(int)
+            weak_gt_classes_numpy = bbox_weak_targets[0].cpu().numpy().astype(int)
+
+            weak_box_features = []
+            for index in weak_indices_numpy:
+                weak_box_features.append(bbox_weak_results['shared_bbox_feats'][index].view(1, -1))
+            if len(weak_box_features) == 0:
+                weak_box_features = None
+            else:
+                weak_box_features = torch.cat(weak_box_features, dim=0)
+        else:
+            weak_box_features = None
+            weak_indices_numpy = None
+            weak_gt_classes_numpy = None
 
         gt_box_features = []
         for index in indices_numpy:
@@ -258,8 +321,13 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 # gt_pseudo_labels = self.kmeans.predict(bbox_results['shared_bbox_feats'].detach().cpu())
                 gt_pseudo_logits = self.pseudo_score(bbox_results['shared_bbox_feats'])
             gt_pseudo_labels = bbox_targets[0][selected_fg_samples]
-            loss_pseudo_score = self.loss_pseudo_cls(gt_pseudo_logits, gt_pseudo_labels.long())
 
+            if weak_box_features is not None:
+                weak_pseudo_logits = self.pseudo_score(weak_box_features)
+                weak_pseudo_labels = bbox_weak_targets[0][weak_selected_fg_samples]
+                gt_pseudo_logits = torch.cat([gt_pseudo_logits, weak_pseudo_logits], dim=0)
+                gt_pseudo_labels = torch.cat([gt_pseudo_labels, weak_pseudo_labels], dim=0)
+            loss_pseudo_score = self.loss_pseudo_cls(gt_pseudo_logits, gt_pseudo_labels.long())
 
             sum_temp = 0
             for index in range(self.k):
@@ -272,12 +340,25 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                     if self.number_dict[dict_key] < self.vos_samples_per_class:
                         self.data_dict[dict_key][self.number_dict[dict_key]] = fts
                         self.number_dict[dict_key] += 1
+                if weak_indices_numpy is not None:
+                    for index in weak_indices_numpy:
+                        fts = bbox_weak_results['shared_bbox_feats'][index].detach()
+                        dict_key = weak_gt_classes_numpy[index]
+                        if self.number_dict[dict_key] < self.vos_samples_per_class:
+                            self.data_dict[dict_key][self.number_dict[dict_key]] = fts
+                            self.number_dict[dict_key] += 1
             else:
                 for index in indices_numpy:
                     fts = bbox_results['shared_bbox_feats'][index].detach()
                     dict_key = gt_classes_numpy[index]
                     self.data_dict[dict_key] = torch.cat((self.data_dict[dict_key][1:],
                                                           fts.view(1, -1)), 0)
+                if weak_indices_numpy is not None:
+                    for index in weak_indices_numpy:
+                        fts = bbox_weak_results['shared_bbox_feats'][index].detach()
+                        dict_key = weak_gt_classes_numpy[index]
+                        self.data_dict[dict_key] = torch.cat((self.data_dict[dict_key][1:],
+                                                              fts.view(1, -1)), 0)
                 if self.epoch >= self.start_epoch:
                     for index in range(self.k):
                         if index == 0:
@@ -316,8 +397,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                     energy_score_for_bg = torch.logsumexp(predictions_ood, 1)
 
                     input_for_loss = torch.cat((energy_score_for_fg, energy_score_for_bg), -1)
-                    id_labels_size = len(selected_fg_samples) if not self.use_all_proposals_ood else \
-                        len(bbox_results['shared_bbox_feats'])
+                    id_labels_size = energy_score_for_fg.shape[0]
                     labels_for_loss = torch.cat((torch.ones(id_labels_size).to(device),
                                                  torch.zeros(len(ood_samples)).to(device)), -1)
 
@@ -332,7 +412,8 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                            img_metas,
                            proposals,
                            rcnn_test_cfg,
-                           rescale=False):
+                           rescale=False,
+                           with_ood=True):
         """Test only det bboxes without augmentation."""
         rpn_score = torch.cat([p[:, -1:] for p in proposals], 0)
         rois = bbox2roi(proposals)
@@ -383,23 +464,28 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 img_shapes[i],
                 scale_factors[i],
                 rescale=rescale,
-                cfg=rcnn_test_cfg)
+                cfg=rcnn_test_cfg,
+                with_ood=with_ood)
             det_bboxes.append(det_bbox)
             det_labels.append(det_label)
             det_ood_scores.append(_ood_scores)
-        return det_bboxes, det_labels, det_ood_scores
+        if with_ood:
+            return det_bboxes, det_labels, det_ood_scores
+        else:
+            return det_bboxes, det_labels, None
 
     def simple_test(self,
                     x,
                     proposal_list,
                     img_metas,
                     proposals=None,
-                    rescale=False):
+                    rescale=False,
+                    with_ood=True):
         """Test without augmentation."""
         assert self.with_bbox, 'Bbox head must be implemented.'
 
         det_bboxes, det_labels, det_ood_scores = self.simple_test_bboxes(
-            x, img_metas, proposal_list, self.test_cfg, rescale=rescale)
+            x, img_metas, proposal_list, self.test_cfg, rescale=rescale, with_ood=with_ood)
         # det_ood_scores = self.simple_test_ood(x, proposal_list)
         if torch.onnx.is_in_onnx_export():
             if self.with_mask:
@@ -408,12 +494,17 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 return det_bboxes, det_labels, det_ood_scores, segm_results,
             else:
                 return det_bboxes, det_labels, det_ood_scores
-
-        bbox_results = [
-            bbox2result_ood(det_bboxes[i], det_labels[i], det_ood_scores[i],
-                            self.bbox_head.num_classes)
-            for i in range(len(det_bboxes))
-        ]
+        if with_ood:
+            bbox_results = [
+                bbox2result_ood(det_bboxes[i], det_labels[i], det_ood_scores[i],
+                                self.bbox_head.num_classes)
+                for i in range(len(det_bboxes))
+            ]
+        else:
+            bbox_results = [
+                bbox2result(det_bboxes[i], det_labels[i], self.bbox_head.num_classes)
+                for i in range(len(det_bboxes))
+            ]
 
         if not self.with_mask:
             return bbox_results

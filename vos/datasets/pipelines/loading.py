@@ -23,10 +23,12 @@ class LoadAnnotationsWithAnnID(LoadAnnotations):
             Defaults to ``dict(backend='disk')``.
     """
 
-    def __init__(self, with_ann_id=True, with_pseudo_labels=True, **kwargs):
+    def __init__(self, with_ann_id=True, with_pseudo_labels=True,
+                 with_weak_bbox=True, **kwargs):
         super().__init__(**kwargs)
         self.with_ann_id = with_ann_id
         self.with_pseudo_labels = with_pseudo_labels
+        self.with_weak_bbox = with_weak_bbox
 
     def _load_ann_ids(self, results):
         """Private function to load label annotations.
@@ -54,6 +56,12 @@ class LoadAnnotationsWithAnnID(LoadAnnotations):
         results['gt_pseudo_labels'] = results['ann_info']['pseudo_labels'].copy()
         return results
 
+    def _load_weak_bboxes(self, results):
+
+        results['gt_weak_bboxes'] = results['ann_info']['weak_bboxes'].copy()
+        results['gt_weak_bboxes_labels'] = results['ann_info']['weak_bboxes_labels'].copy()
+        return results
+
     def __call__(self, results):
         """Call function to load multiple types annotations.
 
@@ -79,6 +87,8 @@ class LoadAnnotationsWithAnnID(LoadAnnotations):
             results = self._load_ann_ids(results)
         if self.with_pseudo_labels:
             results = self._load_pseudo_labels(results)
+        if self.with_weak_bbox:
+            results = self._load_weak_bboxes(results)
         return results
 
     def __repr__(self):
