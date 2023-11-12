@@ -25,8 +25,8 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
         #
         # self.call_hook('after_train_epoch')
         # self._epoch += 1
-        super(PseudoLabelEpochBasedRunner, self).train(data_loader, **kwargs)
         self.run_pseudo_label_epoch()
+        super(PseudoLabelEpochBasedRunner, self).train(data_loader, **kwargs)
 
     def run_pseudo_label_epoch(self):
         with torch.no_grad():

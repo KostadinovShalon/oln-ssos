@@ -3,7 +3,7 @@ data_root = 'data/db6/'
 
 custom_imports = dict(
     imports=[
-        'vos.datasets.vos_coco'
+        'vos.datasets.vos_coco',
         'vos.datasets.pipelines.loading'
     ],
     allow_failed_imports=False)
