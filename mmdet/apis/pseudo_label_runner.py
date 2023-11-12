@@ -4,6 +4,7 @@ from mmcv.runner import EpochBasedRunner
 from mmcv.runner.builder import RUNNERS
 
 from mmdet.core import bbox2roi
+from mmdet.datasets import RepeatDataset
 
 
 @RUNNERS.register_module()
@@ -41,4 +42,7 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
             ann_ids = torch.cat(ann_ids).cpu().numpy()
 
             for ann_id, label in zip(ann_ids, labels):
-                self.data_loader.dataset.coco.anns[ann_id]['pseudo_class'] = label
+                if type(self.data_loader.dataset) == RepeatDataset:
+                    self.data_loader.dataset.dataset.coco.anns[ann_id]['pseudo_class'] = label
+                else:
+                    self.data_loader.dataset.coco.anns[ann_id]['pseudo_class'] = label
