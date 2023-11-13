@@ -16,7 +16,8 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
         super(PseudoLabelEpochBasedRunner, self).train(data_loader, **kwargs)
 
     def run_pseudo_label_epoch(self):
-        weak_conf_thr = 0.6  # self.model.module.roi_head.weak_bbox_test_confidence
+        weak_conf_thr = self.model.module.roi_head.weak_bbox_test_confidence
+        use_weak_bboxes = self.model.module.use_weak_bboxes
         with torch.no_grad():
             ann_ids = []
             weak_img_ids = []
@@ -29,21 +30,22 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
                 ann_ids.extend(gt_ann_ids)
                 self.model.module.roi_head.accumulate_pseudo_labels(fts, rois)
 
-                # Handling weak bboxes
-                gt_ann_ids_list = [g[0].cpu().item() for g in gt_ann_ids]
-                gt_anns = self.data_loader.dataset.coco.loadAnns(gt_ann_ids_list)
-                img_ids = [a['image_id'] for a in gt_anns]
-                proposal_list = self.model.module.rpn_head.simple_test_rpn(fts, inputs[0]['img_metas'])
-                res = self.model.module.roi_head.simple_test(fts, proposal_list, inputs[0]['img_metas'],
-                                                             rescale=False, with_ood=False)
-                bboxes = [res_img[0][0] for res_img in res]
-                bboxes_filtered = [torch.tensor(b[b[:, 4] > weak_conf_thr, :4]).to(fts[0].device) for b in bboxes]
-                weak_rois = bbox2roi(bboxes_filtered)
+                if use_weak_bboxes:
+                    # Handling weak bboxes
+                    gt_ann_ids_list = [g[0].cpu().item() for g in gt_ann_ids]
+                    gt_anns = self.data_loader.dataset.coco.loadAnns(gt_ann_ids_list)
+                    img_ids = [a['image_id'] for a in gt_anns]
+                    proposal_list = self.model.module.rpn_head.simple_test_rpn(fts, inputs[0]['img_metas'])
+                    res = self.model.module.roi_head.simple_test(fts, proposal_list, inputs[0]['img_metas'],
+                                                                 rescale=False, with_ood=False)
+                    bboxes = [res_img[0][0] for res_img in res]
+                    bboxes_filtered = [torch.tensor(b[b[:, 4] > weak_conf_thr, :4]).to(fts[0].device) for b in bboxes]
+                    weak_rois = bbox2roi(bboxes_filtered)
 
-                weak_img_ids.extend([im_id for im_id, b in zip(img_ids, bboxes_filtered) for _ in range(b.shape[0])])
-                weak_bboxes.extend(bboxes_filtered)
+                    weak_img_ids.extend([im_id for im_id, b in zip(img_ids, bboxes_filtered) for _ in range(b.shape[0])])
+                    weak_bboxes.extend(bboxes_filtered)
 
-                self.model.module.roi_head.accumulate_weak_pseudo_labels(fts, weak_rois)
+                    self.model.module.roi_head.accumulate_weak_pseudo_labels(fts, weak_rois)
 
             labels = self.model.module.roi_head.calculate_pseudo_labels()
             ann_ids = torch.cat(ann_ids).cpu().numpy()
@@ -71,27 +73,28 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
             #     if 'weak' not in a.keys() or not a['weak']
             # ]
             # self.data_loader.dataset.coco.imgToAnns =
-            weak_bboxes = torch.cat(weak_bboxes, dim=0)
-            next_ann_id = max(self.data_loader.dataset.coco.anns.keys()) + 1
-            # Adding weak annotations
-            for label, weak_box, weak_img_id in zip(labels[ann_ids.shape[0]:], weak_bboxes, weak_img_ids):
-                box = weak_bboxes[0].cpu().tolist()
-                ann = {
-                    'segmentation': [],
-                    'iscrowd': 0,
-                    'bbox': [int(box[0]), int(box[1]), int(box[2] - box[0]), int(box[3] - box[1])],
-                    'area': int(box[2] - box[0]) * int(box[3] - box[1]),
-                    'image_id': weak_img_id,
-                    'category_id': dataset['categories'][0]['id'],
-                    'pseudo_class': label,
-                    'id': next_ann_id,
-                    'weak': True
-                }
-                dataset['annotations'].append(ann)
-                next_ann_id += 1
-            new_coco = COCO()
-            new_coco.dataset = dataset
-            new_coco.createIndex()
-            new_coco.img_ann_map = new_coco.imgToAnns
-            new_coco.cat_img_map = new_coco.catToImgs
-            self.data_loader.dataset.coco = new_coco
+            if use_weak_bboxes:
+                weak_bboxes = torch.cat(weak_bboxes, dim=0)
+                next_ann_id = max(self.data_loader.dataset.coco.anns.keys()) + 1
+                # Adding weak annotations
+                for label, weak_box, weak_img_id in zip(labels[ann_ids.shape[0]:], weak_bboxes, weak_img_ids):
+                    box = weak_bboxes[0].cpu().tolist()
+                    ann = {
+                        'segmentation': [],
+                        'iscrowd': 0,
+                        'bbox': [int(box[0]), int(box[1]), int(box[2] - box[0]), int(box[3] - box[1])],
+                        'area': int(box[2] - box[0]) * int(box[3] - box[1]),
+                        'image_id': weak_img_id,
+                        'category_id': dataset['categories'][0]['id'],
+                        'pseudo_class': label,
+                        'id': next_ann_id,
+                        'weak': True
+                    }
+                    dataset['annotations'].append(ann)
+                    next_ann_id += 1
+                new_coco = COCO()
+                new_coco.dataset = dataset
+                new_coco.createIndex()
+                new_coco.img_ann_map = new_coco.imgToAnns
+                new_coco.cat_img_map = new_coco.catToImgs
+                self.data_loader.dataset.coco = new_coco

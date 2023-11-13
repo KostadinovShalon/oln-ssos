@@ -269,16 +269,18 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
 
     def calculate_pseudo_labels(self):
         fts = torch.cat(self.post_epoch_features, dim=0)
-        weak_fts = torch.cat(self.post_epoch_weak_features, dim=0)
-        total_fts = torch.cat([fts, weak_fts], dim=0)
+        if len(self.post_epoch_weak_features) > 0:
+            weak_fts = torch.cat(self.post_epoch_weak_features, dim=0)
+            fts = torch.cat([fts, weak_fts], dim=0)
         if self.means is None:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
         else:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
                                           init=self.kmeans.cluster_centers_)
-        labels = self.kmeans.fit_predict(total_fts.cpu())
-        self.means = torch.tensor(self.kmeans.cluster_centers_).to(total_fts.device).detach()
+        labels = self.kmeans.fit_predict(fts.cpu())
+        self.means = torch.tensor(self.kmeans.cluster_centers_).to(fts.device).detach()
         self.post_epoch_features = []
+        self.post_epoch_weak_features = []
         total_samples = sum(self.kmeans.counts_)
         cw = total_samples / (self.k * self.kmeans.counts_)
         self.loss_pseudo_cls = torch.nn.CrossEntropyLoss(weight=torch.tensor(cw, dtype=torch.float32, device=fts.device))

@@ -151,7 +151,7 @@ model = dict(
             nms_thr=0.0,  # No nms
             min_bbox_size=0),
         rcnn=dict(
-            score_thr=0.5,
+            score_thr=0.0,
             nms=dict(type='nms', iou_threshold=0.7),
             # max_per_img should be greater enough than k of AR@k evaluation
             # because the cross-dataset AR evaluation does not count those
