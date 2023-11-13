@@ -275,11 +275,12 @@ def show_result(classes,
 class EpochFasterRCNN(FasterRCNN):
     """Implementation of `Faster R-CNN <https://arxiv.org/abs/1506.01497>`_, epoch-aware"""
 
-    def __init__(self, use_weak_bboxes=False, *args, **kwargs):
+    def __init__(self, use_weak_bboxes=False, calculate_pseudo_labels_from_epoch=0, *args, **kwargs):
         super(EpochFasterRCNN, self).__init__(*args, **kwargs)
         self.epoch = 0
         self.roi_head.bbox_head.ood_score_threshold = 0.
         self.use_weak_bboxes = use_weak_bboxes
+        self.calculate_pseudo_labels_from_epoch = calculate_pseudo_labels_from_epoch
 
     def set_epoch(self, epoch):
         self.epoch = epoch
@@ -354,11 +355,12 @@ class EpochFasterRCNN(FasterRCNN):
 class EpochMaskRCNN(MaskRCNN):
     """Implementation of `Faster R-CNN <https://arxiv.org/abs/1506.01497>`_, epoch-aware"""
 
-    def __init__(self, use_weak_bboxes=False, *args, **kwargs):
+    def __init__(self, use_weak_bboxes=False, calculate_pseudo_labels_from_epoch=0, *args, **kwargs):
         super(EpochMaskRCNN, self).__init__(*args, **kwargs)
         self.epoch = 0
         self.roi_head.bbox_head.ood_score_threshold = 0.
         self.use_weak_bboxes = use_weak_bboxes
+        self.calculate_pseudo_labels_from_epoch = calculate_pseudo_labels_from_epoch
 
     def set_epoch(self, epoch):
         self.epoch = epoch

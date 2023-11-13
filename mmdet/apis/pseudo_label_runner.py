@@ -13,7 +13,8 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
 
     def train(self, data_loader, **kwargs):
         self.data_loader = data_loader
-        self.run_pseudo_label_epoch()
+        if self.model.module.epoch >= self.model.module.calculate_pseudo_labels_from_epoch:
+            self.run_pseudo_label_epoch()
         super(PseudoLabelEpochBasedRunner, self).train(data_loader, **kwargs)
 
     def run_pseudo_label_epoch(self):
