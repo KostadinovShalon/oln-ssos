@@ -1,19 +1,6 @@
-_base_ = [
-    '../_base_/datasets/coco_detection.py',
-    '../_base_/schedules/schedule_1x.py',
-    '../_base_/default_runtime.py'
-]
-custom_imports = dict(
-    imports=[
-        'vos.models.detectors.epoch_faster_rcnn',
-        'vos.models.roi_heads.oln_vos_roi_head',
-        'vos.models.roi_heads.bbox_heads.oln_vos_bbox_head',
-        'vos.datasets.vos_coco'
-    ],
-    allow_failed_imports=False)
 # model settings
 model = dict(
-    type='EpochFasterRCNN',
+    type='FasterRCNN',
     pretrained='torchvision://resnet50',
     backbone=dict(
         type='ResNet',
@@ -50,20 +37,14 @@ model = dict(
         loss_objectness=dict(type='L1Loss', loss_weight=1.0),
         ),
     roi_head=dict(
-        type='OLNKMeansVOSRoIHead',
-        start_epoch=12,
-        logistic_regression_hidden_dim=512,
-        negative_sampling_size=10000,
-        bottomk_epsilon_dist=1,
-        ood_loss_weight=0.1,
-        k=5,
+        type='OlnRoIHead',
         bbox_roi_extractor=dict(
             type='SingleRoIExtractor',
             roi_layer=dict(type='RoIAlign', output_size=7, sampling_ratio=0),
             out_channels=256,
             featmap_strides=[4, 8, 16, 32]),
         bbox_head=dict(
-            type='VOSShared2FCBBoxScoreHead',
+            type='Shared2FCBBoxScoreHead',
             in_channels=256,
             fc_out_channels=1024,
             roi_feat_size=7,
@@ -74,8 +55,8 @@ model = dict(
                 target_stds=[0.1, 0.1, 0.2, 0.2]),
             reg_class_agnostic=False,
             loss_cls=dict(
-                type='CrossEntropyLoss',
-                use_sigmoid=False,
+                type='CrossEntropyLoss', 
+                use_sigmoid=False, 
                 loss_weight=0.0,
                 ),
             loss_bbox=dict(type='L1Loss', loss_weight=1.0),
@@ -97,7 +78,7 @@ model = dict(
                 pos_fraction=0.5,
                 neg_pos_ub=-1,
                 add_gt_as_proposals=False),
-            # Objectness assigner and sampler
+            # Objectness assigner and sampler 
             objectness_assigner=dict(
                 type='MaxIoUAssigner',
                 pos_iou_thr=0.3,
@@ -153,99 +134,6 @@ model = dict(
             # proposals on the 'seen' classes into the budget (k), to avoid
             # evaluating recall on seen-class objects. It's recommended to use
             # max_per_img=1500 or 2000 when evaluating upto AR@1000.
-            max_per_img=1500,
+            max_per_img=300,
             )
     ))
-checkpoint_config = dict(interval=1)
-dataset_type = "VOSCocoSplitDataset"
-
-
-data_root = 'data/voc0712/'
-img_norm_cfg = dict(
-    mean=[123.675, 116.28, 103.53], std=[58.395, 57.12, 57.375], to_rgb=True)
-train_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(type='LoadAnnotations', with_bbox=True),
-    dict(
-        type='Resize',
-        img_scale=[(480, 1333), (512, 1333), (544, 1333), (576, 1333),
-                   (608, 1333), (640, 1333), (672, 1333), (704, 1333),
-                   (736, 1333), (768, 1333), (800, 1333)],
-        multiscale_mode='value',
-        keep_ratio=True),
-    dict(type='RandomFlip', flip_ratio=0.5),
-    dict(type='Normalize', **img_norm_cfg),
-    dict(type='Pad', size_divisor=32),
-    dict(type='DefaultFormatBundle'),
-    dict(type='Collect', keys=['img', 'gt_bboxes', 'gt_labels']),
-]
-test_pipeline = [
-    dict(type='LoadImageFromFile'),
-    dict(
-        type='MultiScaleFlipAug',
-        img_scale=(1333, 800),
-        flip=False,
-        transforms=[
-            dict(type='Resize', keep_ratio=True),
-            dict(type='RandomFlip'),
-            dict(type='Normalize', **img_norm_cfg),
-            dict(type='Pad', size_divisor=32),
-            dict(type='ImageToTensor', keys=['img']),
-            dict(type='Collect', keys=['img']),
-        ])
-]
-data = dict(
-    samples_per_gpu=16,
-    workers_per_gpu=2,
-    train=dict(
-        is_class_agnostic=True,
-        train_class='all',
-        eval_class='all',
-        type=dataset_type,
-        pipeline=train_pipeline,
-        ann_file=data_root + 'voc0712_train_all.json',
-        img_prefix=data_root + 'JPEGImages/',
-        ),
-    val=dict(
-        is_class_agnostic=True,
-        train_class='all',
-        eval_class='all',
-        type=dataset_type,
-        pipeline=test_pipeline,
-        ann_file=data_root + 'val_coco_format.json',
-        img_prefix=data_root + 'JPEGImages/'
-    ),
-    test=dict(
-        is_class_agnostic=True,
-        train_class='all',
-        eval_class='all',
-        type=dataset_type,
-        pipeline=test_pipeline,
-        ann_file=data_root + 'val_coco_format.json',
-        img_prefix=data_root + 'JPEGImages/'
-    ))
-
-custom_hooks = [dict(type='SetEpochInfoHook')]
-lr_config = dict(
-    policy='step',
-    warmup='linear',
-    warmup_iters=500,
-    warmup_ratio=0.001,
-    step=[12, 16])
-total_epochs = 18
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
-# yapf:disable
-log_config = dict(
-    interval=10,
-    hooks=[
-        dict(type='TextLoggerHook'),
-        dict(type='TensorboardLoggerHook')
-    ])
-# yapf:enable
-dist_params = dict(backend='nccl')
-log_level = 'INFO'
-load_from = None
-resume_from = None
-workflow = [('train', 1)]
-
-work_dir='./work_dirs/oln_vos_box_voc0712_kmeans_5/'
