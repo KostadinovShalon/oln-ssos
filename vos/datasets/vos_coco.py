@@ -52,9 +52,13 @@ class VOSCocoSplitDataset(CocoSplitDataset):
         gt_masks_ann = []
         gt_ann_ids = []
         gt_pseudo_class = []
+        gt_weak_bboxes = []
+        gt_weak_bboxes_labels = []
         for i, ann in enumerate(ann_info):
             if ann.get('ignore', False):
                 continue
+            # A weak bounding box is a box detected by OLN but notin the gt
+            is_weak = ann['weak'] if 'weak' in ann.keys() else False
             x1, y1, w, h = ann['bbox']
             inter_w = max(0, min(x1 + w, img_info['width']) - max(x1, 0))
             inter_h = max(0, min(y1 + h, img_info['height']) - max(y1, 0))
@@ -68,11 +72,15 @@ class VOSCocoSplitDataset(CocoSplitDataset):
             if ann.get('iscrowd', False):
                 gt_bboxes_ignore.append(bbox)
             else:
-                gt_bboxes.append(bbox)
-                gt_labels.append(self.cat2label[ann['category_id']])
-                gt_masks_ann.append(ann.get('segmentation', None))
-                gt_ann_ids.append(ann['id'])
-                gt_pseudo_class.append(ann['pseudo_class'])
+                if not is_weak:
+                    gt_bboxes.append(bbox)
+                    gt_labels.append(self.cat2label[ann['category_id']])
+                    gt_masks_ann.append(ann.get('segmentation', None))
+                    gt_ann_ids.append(ann['id'])
+                    gt_pseudo_class.append(ann['pseudo_class'])
+                else:
+                    gt_weak_bboxes.append(bbox)
+                    gt_weak_bboxes_labels.append(ann['pseudo_class'])
 
         if gt_bboxes:
             gt_bboxes = np.array(gt_bboxes, dtype=np.float32)
@@ -84,6 +92,14 @@ class VOSCocoSplitDataset(CocoSplitDataset):
             gt_labels = np.array([], dtype=np.int64)
             gt_ann_ids = np.array([], dtype=np.int64)
             gt_pseudo_class = np.array([], dtype=np.int64)
+
+        if gt_weak_bboxes:
+            gt_weak_bboxes = np.array(gt_weak_bboxes, dtype=np.float32)
+            gt_weak_bboxes_labels = np.array(gt_weak_bboxes_labels, dtype=np.int64)
+        else:
+            gt_weak_bboxes = np.zeros((0, 4), dtype=np.float32)
+            gt_weak_bboxes_labels = np.array([], dtype=np.int64)
+
 
         if gt_bboxes_ignore:
             gt_bboxes_ignore = np.array(gt_bboxes_ignore, dtype=np.float32)
@@ -99,6 +115,8 @@ class VOSCocoSplitDataset(CocoSplitDataset):
             masks=gt_masks_ann,
             ann_ids=gt_ann_ids,
             pseudo_labels=gt_pseudo_class,
+            weak_bboxes=gt_weak_bboxes,
+            weak_bboxes_labels=gt_weak_bboxes_labels,
             seg_map=seg_map)
 
         return ann

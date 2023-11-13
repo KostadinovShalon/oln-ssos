@@ -10,7 +10,8 @@ custom_imports = dict(
         'vos.models.detectors.epoch_faster_rcnn',
         'vos.models.roi_heads.bbox_heads.oln_vos_bbox_head',
         'vos.datasets.vos_coco',
-        'vos.datasets.pipelines.loading'
+        'vos.datasets.pipelines.loading',
+        'vos.datasets.pipelines.formating'
     ],
     allow_failed_imports=False)
 

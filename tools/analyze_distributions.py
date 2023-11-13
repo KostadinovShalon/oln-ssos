@@ -24,6 +24,7 @@ def parse_args():
     parser.add_argument('root_dir', help='Annotations file')
     parser.add_argument('config', help='Config file')
     parser.add_argument('checkpoint', help='Checkpoint file')
+    parser.add_argument('--k', type=int, default=5)
     parser.add_argument('--out-file', default=None, help='Path to output file')
     parser.add_argument(
         '--device', default='cuda:0', help='Device used for inference')
@@ -49,6 +50,8 @@ def main(args):
     device = next(model.parameters()).device  # model device
     cfg = model.cfg
     # prepare data
+
+    k = args.k
 
     coco_file = json.load(open(args.annotations, 'r'))
     object_features = []
@@ -132,12 +135,20 @@ def main(args):
     ax = fig.add_subplot(111)
 
     # for every class, we'll add a scatter plot separately
-    categories = {1: 'firearms', 2: 'firearm parts'}
+    # categories = {1: 'firearms', 2: 'firearm parts'}
     # categories = {3: 'knife', 4: 'camera', 5: 'ceramic knife', 6: 'laptop'}
-    categories = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}
-    colors_per_class = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0), (255, 255, 0)]
-
-    for i, (label, name) in enumerate(categories.items()):
+    categories = {0: 1, 1: 2, 2: 3, 3: 4, 4: 5,
+                  5: 6, 6: 7, 7: 8, 8: 9, 9: 10,
+                  10: 11, 11: 12, 12: 13, 13: 14, 14: 15,
+                  15: 16, 16: 17, 17: 18, 18: 19, 19: 20}
+    colors_per_class = [(255, 0, 0), (0, 255, 0), (0, 0, 255), (0, 0, 0), (255, 255, 0),
+                        (255, 0, 255), (0, 255, 255), (128, 0, 255), (128, 128, 128), (128, 255, 0),
+                        (128, 0, 0), (0, 128, 0), (0, 0, 128), (128, 0, 128), (128, 128, 0),
+                        (255, 128, 0), (0, 255, 128), (255, 0, 128), (128, 128, 255), (255, 255, 128)]
+    cat_keys = list(categories.keys())
+    for i in range(k):
+        label = cat_keys[i]
+        name = categories[label]
         # find the samples of the current class in the data
         indices = [i for i, l in enumerate(labels) if l == label]
 
@@ -190,10 +201,10 @@ def main(args):
         return cv2.resize(img, new_size)
 
     def draw_rectangle_by_class(img, color):
-        img[:2, :] = color
-        img[-2:, :] = color
-        img[:, -2:] = color
-        img[:, :2] = color
+        img[:1, :] = color
+        img[-1:, :] = color
+        img[:, -1:] = color
+        img[:, :1] = color
         return img
 
     for image, label, x, y in tqdm.tqdm(
