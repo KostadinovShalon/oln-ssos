@@ -48,8 +48,11 @@ def main(args):
                        "epochs": args.epochs,
                        "Pseudo Labels": args.k_pseudo_labels
                    })
-    for i in range(args.epochs):
-        ckpt = args.checkpoint.rsplit('/', 1)[0] + f"/epoch_{i + 1}.pth"
+    epochs = list(range(args.epochs)) if args.use_wandb else [0]
+    for i in epochs:
+        ckpt = args.checkpoint
+        if args.use_wandb:
+            ckpt = ckpt.rsplit('/', 1)[0] + f"/epoch_{i + 1}.pth"
         model = init_detector(args.config, ckpt, device=args.device)
 
         # test a single image
