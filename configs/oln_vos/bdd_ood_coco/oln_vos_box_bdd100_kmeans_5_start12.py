@@ -14,6 +14,7 @@ custom_imports = dict(
 # model settings
 model = dict(
     type='EpochFasterRCNN',
+    calculate_pseudo_labels_from_epoch=1,
     roi_head=dict(
         type='OLNKMeansVOSRoIHead',
         start_epoch=12,
