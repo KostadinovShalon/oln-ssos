@@ -5,6 +5,7 @@ from mmcv.runner.builder import RUNNERS
 from pycocotools.coco import COCO
 
 from mmdet.core import bbox2roi
+from mmdet.datasets import RepeatDataset
 
 
 @RUNNERS.register_module()
@@ -57,8 +58,11 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
                 a for a in dataset['annotations']
                 if 'weak' not in a.keys() or not a['weak']
             ]
-            for ann in dataset['annotations']:
-                ann['pseudo_class'] = pseudo_classes[ann['id']]
+            for ann_id, label in zip(ann_ids, labels):
+                if type(self.data_loader.dataset) == RepeatDataset:
+                    self.data_loader.dataset.dataset.coco.anns[ann_id]['pseudo_class'] = label
+                else:
+                    self.data_loader.dataset.coco.anns[ann_id]['pseudo_class'] = label
             #
             #
             # for ann_id, label in zip(ann_ids, labels[:ann_ids.shape[0]]):
