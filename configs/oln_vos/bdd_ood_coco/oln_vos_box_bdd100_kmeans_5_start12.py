@@ -71,7 +71,7 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    samples_per_gpu=16,
+    samples_per_gpu=8,
     workers_per_gpu=2,
     train=dict(
         is_class_agnostic=True,
@@ -105,15 +105,15 @@ custom_hooks = [dict(type='SetEpochInfoHook')]
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=500,
+    warmup_iters=1000,
     warmup_ratio=0.001,
     step=[12, 16])
 total_epochs = 18
 
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.01, momentum=0.9, weight_decay=0.0001)
 # yapf:disable
 log_config = dict(
-    interval=50,
+    interval=100,
     hooks=[
         dict(type='TextLoggerHook'),
         dict(type='TensorboardLoggerHook')
