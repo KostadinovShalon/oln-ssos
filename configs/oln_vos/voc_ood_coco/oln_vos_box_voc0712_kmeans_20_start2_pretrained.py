@@ -3,6 +3,7 @@ model = dict(
     calculate_pseudo_labels_from_epoch=0,
     roi_head=dict(
         k=20,
+        start_epoch=2,
         repeat_ood_sampling=1))
 work_dir='./work_dirs/oln_vos_box_voc0712_kmeans_20_start2_pretrained/'
 load_from='./work_dirs/oln_box_voc/epoch_8.pth'
