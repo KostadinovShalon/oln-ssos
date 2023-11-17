@@ -1,4 +1,4 @@
-_base_ = ['../../oln_mask/oln_mask_model.py',
+_base_ = ['../../oln_box/oln_box_model.py',
           '../../_base_/datasets/ltdimaginig_split_detection.py',
           '../../_base_/schedules/schedule_1x.py',
           '../../_base_/default_runtime.py'
