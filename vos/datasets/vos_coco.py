@@ -194,3 +194,15 @@ class VOSDB6SplitDataset(VOSCocoSplitDataset):
         'id': ID_CLASSES,
         'ood': OOD_CLASSES
     }
+
+
+@DATASETS.register_module()
+class VOSLtdImagingSplitDataset(VOSCocoSplitDataset):
+    CLASSES = ('human', 'bicycle', 'motorcycle', 'vehicle')
+    ID_CLASSES = ('human', 'bicycle', 'motorcycle')
+    OOD_CLASSES = ('vehicle',)
+    class_names_dict = {
+        'all': CLASSES,
+        'id': ID_CLASSES,
+        'ood': OOD_CLASSES
+    }
