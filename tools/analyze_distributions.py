@@ -57,7 +57,7 @@ def main(args):
     object_features = []
     labels = []
     images = []
-    for img_dict in tqdm.tqdm(coco_file['images'][:1000]):
+    for img_dict in tqdm.tqdm(coco_file['images'][:500]):
         # add information into dict
         img = os.path.join(args.root_dir, img_dict['file_name'])
         anns = [a for a in coco_file['annotations'] if a['image_id'] == img_dict['id']]
