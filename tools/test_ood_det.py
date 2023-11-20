@@ -1,4 +1,5 @@
 import argparse
+import json
 import os
 import warnings
 
@@ -28,6 +29,7 @@ def parse_args():
     parser.add_argument('--mode', default='id', choices=['id', 'ood'])
     parser.add_argument('--optimal-score-threshold', type=float)
     parser.add_argument('--anomaly-threshold', type=float)
+    parser.add_argument('--results-file')
     parser.add_argument(
         '--fuse-conv-bn',
         action='store_true',
@@ -107,152 +109,164 @@ def parse_args():
 
 def main():
     args = parse_args()
-
-    if args.eval and args.format_only:
-        raise ValueError('--eval and --format_only cannot be both specified')
-
-    if (args.out is not None and not args.out.endswith(('.pkl', '.pickle'))):
-        raise ValueError('The output file must be a pkl file.')
-
-    cfg = Config.fromfile(args.cfg)
     optimal_score_threshold = args.optimal_score_threshold
     anomaly_score_threshold = args.anomaly_threshold
+    cfg = Config.fromfile(args.cfg)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
-    # import modules from string list.
-    if cfg.get('custom_imports', None):
-        from mmcv.utils import import_modules_from_strings
-        import_modules_from_strings(**cfg['custom_imports'])
-    # set cudnn_benchmark
-    if cfg.get('cudnn_benchmark', False):
-        torch.backends.cudnn.benchmark = True
-    cfg.model.pretrained = None
-    if cfg.model.get('neck'):
-        if isinstance(cfg.model.neck, list):
-            for neck_cfg in cfg.model.neck:
-                if neck_cfg.get('rfp_backbone'):
-                    if neck_cfg.rfp_backbone.get('pretrained'):
-                        neck_cfg.rfp_backbone.pretrained = None
-        elif cfg.model.neck.get('rfp_backbone'):
-            if cfg.model.neck.rfp_backbone.get('pretrained'):
-                cfg.model.neck.rfp_backbone.pretrained = None
 
-    # in case the test dataset is concatenated
-    samples_per_gpu = 1
-    if isinstance(cfg.data.test, dict):
-        cfg.data.test.test_mode = True
-        samples_per_gpu = cfg.data.test.pop('samples_per_gpu', 1)
-        if samples_per_gpu > 1:
-            # Replace 'ImageToTensor' to 'DefaultFormatBundle'
-            cfg.data.test.pipeline = replace_ImageToTensor(
-                cfg.data.test.pipeline)
-    elif isinstance(cfg.data.test, list):
-        for ds_cfg in cfg.data.test:
-            ds_cfg.test_mode = True
-        samples_per_gpu = max(
-            [ds_cfg.pop('samples_per_gpu', 1) for ds_cfg in cfg.data.test])
-        if samples_per_gpu > 1:
+    if args.results_file is None:
+
+        if args.eval and args.format_only:
+            raise ValueError('--eval and --format_only cannot be both specified')
+
+        if (args.out is not None and not args.out.endswith(('.pkl', '.pickle'))):
+            raise ValueError('The output file must be a pkl file.')
+
+        # import modules from string list.
+        if cfg.get('custom_imports', None):
+            from mmcv.utils import import_modules_from_strings
+            import_modules_from_strings(**cfg['custom_imports'])
+        # set cudnn_benchmark
+        if cfg.get('cudnn_benchmark', False):
+            torch.backends.cudnn.benchmark = True
+        cfg.model.pretrained = None
+        if cfg.model.get('neck'):
+            if isinstance(cfg.model.neck, list):
+                for neck_cfg in cfg.model.neck:
+                    if neck_cfg.get('rfp_backbone'):
+                        if neck_cfg.rfp_backbone.get('pretrained'):
+                            neck_cfg.rfp_backbone.pretrained = None
+            elif cfg.model.neck.get('rfp_backbone'):
+                if cfg.model.neck.rfp_backbone.get('pretrained'):
+                    cfg.model.neck.rfp_backbone.pretrained = None
+
+        # in case the test dataset is concatenated
+        samples_per_gpu = 1
+        if isinstance(cfg.data.test, dict):
+            cfg.data.test.test_mode = True
+            samples_per_gpu = cfg.data.test.pop('samples_per_gpu', 1)
+            if samples_per_gpu > 1:
+                # Replace 'ImageToTensor' to 'DefaultFormatBundle'
+                cfg.data.test.pipeline = replace_ImageToTensor(
+                    cfg.data.test.pipeline)
+        elif isinstance(cfg.data.test, list):
             for ds_cfg in cfg.data.test:
-                ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)
+                ds_cfg.test_mode = True
+            samples_per_gpu = max(
+                [ds_cfg.pop('samples_per_gpu', 1) for ds_cfg in cfg.data.test])
+            if samples_per_gpu > 1:
+                for ds_cfg in cfg.data.test:
+                    ds_cfg.pipeline = replace_ImageToTensor(ds_cfg.pipeline)
 
-    # init distributed env first, since logger depends on the dist info.
-    if args.launcher == 'none':
-        distributed = False
+        # init distributed env first, since logger depends on the dist info.
+        if args.launcher == 'none':
+            distributed = False
+        else:
+            distributed = True
+            init_dist(args.launcher, **cfg.dist_params)
+
+        # build the dataloader
+        if args.mode == 'ood' and (optimal_score_threshold is None or anomaly_score_threshold is None):
+            raise ValueError('Optimal Scores and Anomaly Scores needed for OOD ')
+
+        dataset = build_dataset(cfg.data.test)
+        data_loader = build_dataloader(
+            dataset,
+            samples_per_gpu=samples_per_gpu,
+            workers_per_gpu=cfg.data.workers_per_gpu,
+            dist=distributed,
+            shuffle=False)
+
+        # build the model and load checkpoint
+        cfg.model.train_cfg = None
+        model = build_detector(cfg.model, test_cfg=cfg.get('test_cfg'))
+        if args.mode == 'ood' or anomaly_score_threshold is not None:
+            model.roi_head.bbox_head.ood_score_threshold = anomaly_score_threshold
+        fp16_cfg = cfg.get('fp16', None)
+        if fp16_cfg is not None:
+            wrap_fp16_model(model)
+        checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
+        if args.fuse_conv_bn:
+            model = fuse_conv_bn(model)
+        # old versions did not save class info in checkpoints, this walkaround is
+        # for backward compatibility
+        if 'CLASSES' in checkpoint['meta']:
+            model.CLASSES = checkpoint['meta']['CLASSES']
+        else:
+            model.CLASSES = dataset.CLASSES
+
+
+        if not distributed:
+            model = MMDataParallel(model, device_ids=[0])
+            show = args.show
+            show_dir = args.show_dir
+            sc_th = args.show_score_thr if args.mode == 'id' else optimal_score_threshold
+            outputs = single_gpu_test(model, data_loader, show, show_dir,
+                                      sc_th)
+        else:
+            model = MMDistributedDataParallel(
+                model.cuda(),
+                device_ids=[torch.cuda.current_device()],
+                broadcast_buffers=False)
+            outputs = multi_gpu_test(model, data_loader, args.tmpdir,
+                                     args.gpu_collect)
+        rank, _ = get_dist_info()
+        if rank == 0:
+            if args.out:
+                print(f'\nwriting results to {args.out}')
+                mmcv.dump(outputs, args.out)
+            kwargs = {} if args.eval_options is None else args.eval_options
+            if args.format_only:
+                dataset.format_results(outputs, **kwargs)
+            if args.eval:
+                eval_kwargs = cfg.get('evaluation', {}).copy()
+                # hard-code way to remove EvalHook args
+                for key in [
+                        'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
+                        'rule'
+                ]:
+                    eval_kwargs.pop(key, None)
+                eval_kwargs.update(dict(metric=args.eval, **kwargs))
+                print(dataset.evaluate(outputs, **eval_kwargs))
+            print(f"\ngetting id optimal score threshold")
+            if args.results_file is None:
+                if isinstance(outputs[0], list):
+                    iou_type = 'bbox'
+                    results = dataset._det2json(outputs)
+                    # ood_json_results = datasets['ood']._det2json(results['ood'])
+                elif isinstance(outputs[0], tuple):
+                    iou_type = 'segm'
+                    _, results = dataset._segm2json(outputs)
+                    # ood_json_results = datasets['ood']._segm2json(results['ood'])
     else:
-        distributed = True
-        init_dist(args.launcher, **cfg.dist_params)
+        results = json.load(open(args.results_file, 'r'))
+        iou_type = 'bbox'
+    if 'ood_score' not in results[0].keys() and 'inter_feat' in results[0].keys():
+        for r in results:
+            r['ood_score'] = torch.logsumexp(torch.tensor(r['inter_feat'])[:-1], dim=0).item()
+            r['category_id'] = 1
+    if args.mode == 'ood':
+        results = [r for r in results if r['score'] > optimal_score_threshold
+                           and r['ood_score'] < anomaly_score_threshold]
 
-    # build the dataloader
-    if args.mode == 'ood' and (optimal_score_threshold is None or anomaly_score_threshold is None):
-        raise ValueError('Optimal Scores and Anomaly Scores needed for OOD ')
+    gt_coco_api = COCO(cfg.data.test.ann_file)
+    res_coco_api = gt_coco_api.loadRes(results)
+    results_api = COCOeval(gt_coco_api, res_coco_api, iouType=iou_type)
 
-    dataset = build_dataset(cfg.data.test)
-    data_loader = build_dataloader(
-        dataset,
-        samples_per_gpu=samples_per_gpu,
-        workers_per_gpu=cfg.data.workers_per_gpu,
-        dist=distributed,
-        shuffle=False)
+    # results_api.params.catIds = np.array([1])
 
-    # build the model and load checkpoint
-    cfg.model.train_cfg = None
-    model = build_detector(cfg.model, test_cfg=cfg.get('test_cfg'))
-    if args.mode == 'ood' or anomaly_score_threshold is not None:
-        model.roi_head.bbox_head.ood_score_threshold = anomaly_score_threshold
-    fp16_cfg = cfg.get('fp16', None)
-    if fp16_cfg is not None:
-        wrap_fp16_model(model)
-    checkpoint = load_checkpoint(model, args.checkpoint, map_location='cpu')
-    if args.fuse_conv_bn:
-        model = fuse_conv_bn(model)
-    # old versions did not save class info in checkpoints, this walkaround is
-    # for backward compatibility
-    if 'CLASSES' in checkpoint['meta']:
-        model.CLASSES = checkpoint['meta']['CLASSES']
-    else:
-        model.CLASSES = dataset.CLASSES
-
-    if not distributed:
-        model = MMDataParallel(model, device_ids=[0])
-        show = args.show
-        show_dir = args.show_dir
-        sc_th = args.show_score_thr if args.mode == 'id' else optimal_score_threshold
-        outputs = single_gpu_test(model, data_loader, show, show_dir,
-                                  sc_th)
-    else:
-        model = MMDistributedDataParallel(
-            model.cuda(),
-            device_ids=[torch.cuda.current_device()],
-            broadcast_buffers=False)
-        outputs = multi_gpu_test(model, data_loader, args.tmpdir,
-                                 args.gpu_collect)
-    rank, _ = get_dist_info()
-    if rank == 0:
-        if args.out:
-            print(f'\nwriting results to {args.out}')
-            mmcv.dump(outputs, args.out)
-        kwargs = {} if args.eval_options is None else args.eval_options
-        if args.format_only:
-            dataset.format_results(outputs, **kwargs)
-        if args.eval:
-            eval_kwargs = cfg.get('evaluation', {}).copy()
-            # hard-code way to remove EvalHook args
-            for key in [
-                    'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
-                    'rule'
-            ]:
-                eval_kwargs.pop(key, None)
-            eval_kwargs.update(dict(metric=args.eval, **kwargs))
-            print(dataset.evaluate(outputs, **eval_kwargs))
-        print(f"\ngetting id optimal score threshold")
-        if isinstance(outputs[0], list):
-            iou_type = 'bbox'
-            results = dataset._det2json(outputs)
-            # ood_json_results = datasets['ood']._det2json(results['ood'])
-        elif isinstance(outputs[0], tuple):
-            iou_type = 'segm'
-            _, results = dataset._segm2json(outputs)
-            # ood_json_results = datasets['ood']._segm2json(results['ood'])
-        if args.mode == 'ood':
-            results = [r for r in results if r['score'] > optimal_score_threshold
-                               and r['ood_score'] < anomaly_score_threshold]
-
-        gt_coco_api = COCO(cfg.data.test.ann_file)
-        res_coco_api = gt_coco_api.loadRes(results)
-        results_api = COCOeval(gt_coco_api, res_coco_api, iouType=iou_type)
-
-        # results_api.params.catIds = np.array([1])
-
-        # Calculate and print aggregate results
-        results_api.params.useCats = 0
-        results_api.evaluate()
-        results_api.accumulate()
-        results_api.summarize()
-        if args.mode == 'id':
-            # Compute optimal micro F1 score threshold. We compute the f1 score for
-            # every class and score threshold. We then compute the score threshold that
-            # maximizes the F-1 score of every class. The final score threshold is the average
-            # over all classes.
+    # Calculate and print aggregate results
+    results_api.params.useCats = 0
+    results_api.evaluate()
+    results_api.accumulate()
+    results_api.summarize()
+    if args.mode == 'id':
+        # Compute optimal micro F1 score threshold. We compute the f1 score for
+        # every class and score threshold. We then compute the score threshold that
+        # maximizes the F-1 score of every class. The final score threshold is the average
+        # over all classes.
+        if optimal_score_threshold is None:
             precisions = results_api.eval['precision'].mean(0)[:, :, 0, 2]
             recalls = np.expand_dims(results_api.params.recThrs, 1)
             f1_scores = 2 * (precisions * recalls) / (precisions + recalls)
@@ -264,15 +278,15 @@ def main():
             optimal_score_threshold = optimal_score_threshold[optimal_score_threshold != 0]
             optimal_score_threshold = optimal_score_threshold.mean()
             print("Optimal score threshold: ", optimal_score_threshold)
-            if anomaly_score_threshold is None:
-                dt_ids_with_match = [int(dt_id) for ev_im in results_api.evalImgs for dt_id in ev_im['gtMatches'][0] if
-                                     dt_id > 0]
-                valid_detections = results_api.cocoDt.loadAnns(dt_ids_with_match)
-                optimal_detections = [v for v in valid_detections if v['score'] > optimal_score_threshold]
-                ood_scores = [o['ood_score'] for o in optimal_detections]
-                ood_scores.sort()
-                anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
-            print("Anomaly Score Threshold: ", anomaly_score_threshold)
+        if anomaly_score_threshold is None:
+            dt_ids_with_match = [int(dt_id) for ev_im in results_api.evalImgs for dt_id in ev_im['gtMatches'][0] if
+                                 dt_id > 0]
+            valid_detections = list(results_api.cocoDt.anns.values())#results_api.cocoDt.loadAnns(dt_ids_with_match)
+            optimal_detections = [v for v in valid_detections if v['score'] > optimal_score_threshold]
+            ood_scores = [o['ood_score'] for o in optimal_detections]
+            ood_scores.sort()
+            anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
+        print("Anomaly Score Threshold: ", anomaly_score_threshold)
 
 
 if __name__ == '__main__':
