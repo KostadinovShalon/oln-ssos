@@ -15,6 +15,9 @@ perform anomaly detection on an object level. We dub this method **OLN-VOS**.
 
 This repo is based on the OLN repo. The installation follows the same instructions. Additionally, scitkit-learn==1.0.2 is needed.
 
+## Config files
+A description of the new config file options is detailed [here](docs/oln_vos_config_files.md). 
+
 ## Training
 Training is done similar to MMDet 2.x, but with the train_pseudo_label.py file:
 ```
