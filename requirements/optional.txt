@@ -3,4 +3,4 @@ cityscapesscripts
 imagecorruptions
 mmlvis
 scipy
-sklearn
+scikit-learn==1.0.2
