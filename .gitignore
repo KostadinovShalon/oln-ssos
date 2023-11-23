@@ -127,3 +127,6 @@ token.txt
 
 results/
 outputs/
+datasets/
+./*.sh
+wandb/
