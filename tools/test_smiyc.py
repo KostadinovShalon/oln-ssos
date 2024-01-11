@@ -32,6 +32,8 @@ def parse_args():
         '--async-test',
         action='store_true',
         help='whether to set async options for async inference.')
+    parser.add_argument('--mask-comb-method', help='method to combine the instance segmentation masks into a '
+                                                   'semantic mask', choices=['min', 'max', 'avg'], default='min')
     args = parser.parse_args()
     return args
 
@@ -55,6 +57,8 @@ def main(args):
             ckpt = ckpt.rsplit('/', 1)[0] + f"/epoch_{i + 1}.pth"
         model = init_detector(args.config, ckpt, device=args.device)
 
+        comb_method = args.mask_comb_method
+
         # test a single image
         ev = Evaluation(
             method_name=f'OLNVOSMASK_min_k{args.k_pseudo_labels}_deep_epoch_{i + 1}',
@@ -68,21 +72,24 @@ def main(args):
 
             segm_maps = np.stack(masks, axis=0)
             ood_scores = result[0][0][:, 5]
-            # count = np.sum(segm_maps, axis=0)
             ood = ood_scores[:, None, None] * segm_maps
-            # sum_ood = np.sum(ood, axis=0)
-            # max_ood = np.max(ood, axis=0)
-            # avg = sum_ood / count
-            # avg[np.isnan(avg)] = 1.0
-            # max_ood[max_ood == 0] = 1.
-            ood[ood == 0] = 1
-            min_ood = np.min(ood, axis=0)
-
-            # avg = 1 - avg
-            min_ood = 1 - min_ood
-            # max_ood = 1 - max_ood
-            # provide the output for saving
-            ev.save_output(frame, min_ood)
+            if comb_method == 'min':
+                ood[ood == 0] = 1
+                min_ood = np.min(ood, axis=0)
+                min_ood = 1 - min_ood
+                ev.save_output(frame, min_ood)
+            elif comb_method == 'max':
+                max_ood = np.max(ood, axis=0)
+                max_ood[max_ood == 0] = 1.
+                max_ood = 1 - max_ood
+                ev.save_output(frame, max_ood)
+            else:
+                count = np.sum(segm_maps, axis=0)
+                sum_ood = np.sum(ood, axis=0)
+                avg = sum_ood / count
+                avg[np.isnan(avg)] = 1.0
+                avg = 1 - avg
+                ev.save_output(frame, avg)
         ev.wait_to_finish_saving()
         # show the results
         ag = ev.calculate_metric_from_saved_outputs(
