@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from sklearn.cluster import MiniBatchKMeans
 
 from mmdet.core import bbox2roi, bbox2result
-from mmdet.models import HEADS, OlnRoIHead
+from mmdet.models import HEADS, OlnRoIHead, build_roi_extractor
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 
@@ -53,6 +53,11 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                  repeat_ood_sampling=4,
                  use_all_proposals_ood=False,
                  weak_bbox_test_confidence=0.5,
+                 pseudo_bbox_roi_extractor=dict(
+                     type='SingleRoIExtractor',
+                     roi_layer=dict(type='RoIAlign', output_size=3, sampling_ratio=0),
+                     out_channels=256,
+                     featmap_strides=[4, 8, 16, 32]),
                  *args,
                  **kwargs):
         """
@@ -107,8 +112,8 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
             if type(m) == nn.Linear:
                 nn.init.normal_(m.weight, std=0.01)
                 nn.init.constant_(m.bias, 0)
-
-        self.means = None
+        ft_size = pseudo_bbox_roi_extractor['roi_layer']['output_size'] ** 2 * pseudo_bbox_roi_extractor['out_channels']
+        self.means = nn.Parameter((torch.zeros(k, ft_size)), requires_grad=False)
         self.cov = None
         self.kmeans = None
 
@@ -119,6 +124,8 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.post_epoch_weak_features = []
         self.pseudo_label_loss_weight = pseudo_label_loss_weight
         self.bbox_head.num_classes = self.k
+
+        self.pseudo_bbox_roi_extractor = build_roi_extractor(pseudo_bbox_roi_extractor)
 
     def forward_train(self,
                       x,
@@ -252,12 +259,10 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         return bbox_results
 
     def accumulate_pseudo_labels(self, fts, rois):
-        bbox_feats = self.bbox_roi_extractor(
+        bbox_feats = self.pseudo_bbox_roi_extractor(
             fts[:self.bbox_roi_extractor.num_inputs], rois)
-        if self.with_shared_head:
-            bbox_feats = self.shared_head(bbox_feats)
-        _, _, _, shared_fts = self.bbox_head(bbox_feats)
-        self.post_epoch_features.append(shared_fts)
+        bbox_feats = bbox_feats.flatten(1)
+        self.post_epoch_features.append(bbox_feats)
 
     def accumulate_weak_pseudo_labels(self, fts, rois):
         bbox_feats = self.bbox_roi_extractor(
@@ -272,18 +277,18 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         if len(self.post_epoch_weak_features) > 0:
             weak_fts = torch.cat(self.post_epoch_weak_features, dim=0)
             fts = torch.cat([fts, weak_fts], dim=0)
-        if self.means is None:
+        if self.means.sum().cpu().item() == 0:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
         else:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
-                                          init=self.kmeans.cluster_centers_)
+                                          init=self.means.data.cpu())
         labels = self.kmeans.fit_predict(fts.cpu())
-        self.means = torch.tensor(self.kmeans.cluster_centers_).to(fts.device).detach()
+        self.means.data = torch.tensor(self.kmeans.cluster_centers_).to(fts.device)
         self.post_epoch_features = []
         self.post_epoch_weak_features = []
         total_samples = sum(self.kmeans.counts_)
         cw = total_samples / (self.k * self.kmeans.counts_)
-        self.loss_pseudo_cls = torch.nn.CrossEntropyLoss(weight=torch.tensor(cw, dtype=torch.float32, device=fts.device))
+        # self.loss_pseudo_cls = torch.nn.CrossEntropyLoss(weight=torch.tensor(cw, dtype=torch.float32, device=fts.device))
         return labels
 
     def _ood_forward_train(self, bbox_results, bbox_targets, bbox_weak_results, bbox_weak_targets, device):

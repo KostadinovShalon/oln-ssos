@@ -281,7 +281,8 @@ def main():
         if anomaly_score_threshold is None:
             dt_ids_with_match = [int(dt_id) for ev_im in results_api.evalImgs for dt_id in ev_im['gtMatches'][0] if
                                  dt_id > 0]
-            valid_detections = list(results_api.cocoDt.anns.values())#results_api.cocoDt.loadAnns(dt_ids_with_match)
+            dt_ids_with_match = list(set(dt_ids_with_match))
+            valid_detections = results_api.cocoDt.loadAnns(dt_ids_with_match) #list(results_api.cocoDt.anns.values())#
             optimal_detections = [v for v in valid_detections if v['score'] > optimal_score_threshold]
             ood_scores = [o['ood_score'] for o in optimal_detections]
             ood_scores.sort()
