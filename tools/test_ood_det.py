@@ -27,7 +27,7 @@ def parse_args():
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('--out', help='output result file in pickle format of the id dataset')
     parser.add_argument('--mode', default='id', choices=['id', 'ood'])
-    parser.add_argument('--optimal-score-threshold', type=float)
+    parser.add_argument('--optimal-score-threshold', type=float, default=0.)
     parser.add_argument('--anomaly-threshold', type=float)
     parser.add_argument('--results-file')
     parser.add_argument(
