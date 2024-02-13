@@ -265,12 +265,10 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.post_epoch_features.append(bbox_feats)
 
     def accumulate_weak_pseudo_labels(self, fts, rois):
-        bbox_feats = self.bbox_roi_extractor(
+        bbox_feats = self.pseudo_bbox_roi_extractor(
             fts[:self.bbox_roi_extractor.num_inputs], rois)
-        if self.with_shared_head:
-            bbox_feats = self.shared_head(bbox_feats)
-        _, _, _, shared_fts = self.bbox_head(bbox_feats)
-        self.post_epoch_weak_features.append(shared_fts)
+        bbox_feats = bbox_feats.flatten(1)
+        self.post_epoch_weak_features.append(bbox_feats)
 
     def calculate_pseudo_labels(self):
         fts = torch.cat(self.post_epoch_features, dim=0)
