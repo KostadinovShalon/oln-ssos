@@ -60,3 +60,5 @@ data = dict(
 
 load_from = './work_dirs/oln_mask/epoch_8.pth'
 custom_hooks = [dict(type='SetEpochInfoHook')]
+# Runner type
+runner = dict(type='PseudoLabelEpochBasedRunner')
