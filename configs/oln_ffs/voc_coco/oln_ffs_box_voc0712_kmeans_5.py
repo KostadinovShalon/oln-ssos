@@ -125,4 +125,4 @@ load_from = None
 resume_from = None
 workflow = [('train', 1)]
 
-load_from = './work_dirs/oln_mask/epoch_8.pth'
+load_from = './work_dirs/oln_box/epoch_8.pth'
