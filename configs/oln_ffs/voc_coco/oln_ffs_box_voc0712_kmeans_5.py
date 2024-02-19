@@ -17,7 +17,7 @@ model = dict(
     calculate_pseudo_labels_from_epoch=0,
     roi_head=dict(
         type='OLNKMeansFFSRoIHead',
-        start_epoch=12,
+        start_epoch=4,
         logistic_regression_hidden_dim=512,
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
@@ -121,8 +121,6 @@ log_config = dict(
 # yapf:enable
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-load_from = None
+load_from = './work_dirs/oln_box/epoch_8.pth'
 resume_from = None
 workflow = [('train', 1)]
-
-load_from = './work_dirs/oln_box/epoch_8.pth'
