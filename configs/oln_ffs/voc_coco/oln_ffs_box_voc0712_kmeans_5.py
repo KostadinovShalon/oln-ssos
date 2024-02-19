@@ -72,12 +72,12 @@ test_pipeline = [
         ])
 ]
 data = dict(
-    samples_per_gpu=16,
+    samples_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
         is_class_agnostic=True,
-        train_class='all',
-        eval_class='all',
+        train_class='voc',
+        eval_class='voc',
         type=dataset_type,
         pipeline=train_pipeline,
         ann_file=data_root + 'voc0712_train_all.json',
@@ -85,8 +85,8 @@ data = dict(
         ),
     val=dict(
         is_class_agnostic=True,
-        train_class='all',
-        eval_class='all',
+        train_class='voc',
+        eval_class='voc',
         type=dataset_type,
         pipeline=test_pipeline,
         ann_file=data_root + 'val_coco_format.json',
@@ -94,8 +94,8 @@ data = dict(
     ),
     test=dict(
         is_class_agnostic=True,
-        train_class='all',
-        eval_class='all',
+        train_class='voc',
+        eval_class='voc',
         type=dataset_type,
         pipeline=test_pipeline,
         ann_file=data_root + 'val_coco_format.json',
@@ -108,10 +108,10 @@ lr_config = dict(
     warmup='linear',
     warmup_iters=500,
     warmup_ratio=0.001,
-    step=[12, 16])
-total_epochs = 18
+    step=[4])
+total_epochs = 8
 
-optimizer = dict(type='SGD', lr=0.02, momentum=0.9, weight_decay=0.0001)
+optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 # yapf:disable
 log_config = dict(
     interval=50,
@@ -124,3 +124,5 @@ log_level = 'INFO'
 load_from = None
 resume_from = None
 workflow = [('train', 1)]
+
+load_from = './work_dirs/oln_mask/epoch_8.pth'
