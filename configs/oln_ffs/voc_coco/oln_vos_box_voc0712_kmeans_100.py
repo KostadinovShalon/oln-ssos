@@ -23,7 +23,6 @@ model = dict(
         bottomk_epsilon_dist=1,
         ood_loss_weight=0.1,
         pseudo_label_loss_weight=1.,
-        nll_loss_weight=0.0001,
         k=100,
         repeat_ood_sampling=1,
         use_all_proposals_ood=False,
