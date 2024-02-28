@@ -206,3 +206,14 @@ class VOSLtdImagingSplitDataset(VOSCocoSplitDataset):
         'id': ID_CLASSES,
         'ood': OOD_CLASSES
     }
+
+@DATASETS.register_module()
+class VOSSIXRay10SplitDataset(VOSCocoSplitDataset):
+    CLASSES = ('firearm', 'knife', 'wrench', 'pliers', 'scissors')
+    ID_CLASSES = ('knife', 'wrench', 'pliers', 'scissors')
+    OOD_CLASSES = ('firearm',)
+    class_names_dict = {
+        'all': CLASSES,
+        'id': ID_CLASSES,
+        'ood': OOD_CLASSES
+    }
