@@ -295,13 +295,13 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 last_index += n_fts
                 current_iter += 1
             else:
-                fts_to_use = 1024 - (last_index + n_fts)
+                fts_to_use = 1024 - last_index
                 if fts_to_use > 0:
-                    data_to_fit[last_index:(last_index + fts_to_use)] = iter_fts[:fts_to_use]
+                    data_to_fit[last_index:] = iter_fts[:fts_to_use]
                 self.kmeans.partial_fit(data_to_fit.cpu())
                 last_index = n_fts - fts_to_use
                 data_to_fit = torch.zeros((1024, self.post_epoch_features[0].shape[1])).to(dev)
-                data_to_fit[:last_index] = iter_fts[last_index:]
+                data_to_fit[:last_index] = iter_fts[fts_to_use:]
                 current_iter += 1
         labels = []
         for iter_fts in self.post_epoch_features:
