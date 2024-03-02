@@ -29,7 +29,17 @@ data = dict(
     workers_per_gpu=2,
     train=dict(
         pipeline=train_pipeline,
-        ))
+        ),
+    test=dict(
+        type='CocoBDDSplitDataset',
+        ann_file='data/coco/annotations/instances_val2017_ood_wrt_bdd_rm_overlap.json',
+        img_prefix='data/coco/val2017',
+        is_class_agnostic=True,
+        train_class='bdd',
+        eval_class='nonbdd',
+    )
+)
+
 
 lr_config = dict(
     policy='step',
