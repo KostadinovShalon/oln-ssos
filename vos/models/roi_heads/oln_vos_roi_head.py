@@ -308,7 +308,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
             if iter_fts is None:
                 continue
             _labels = self.kmeans.predict(iter_fts.cpu())
-            labels.append(_labels)
+            labels.append(torch.tensor(_labels).to(dev))
         labels = torch.cat(labels)
         self.means.data = torch.tensor(self.kmeans.cluster_centers_).to(dev)
         self.post_epoch_features = []
