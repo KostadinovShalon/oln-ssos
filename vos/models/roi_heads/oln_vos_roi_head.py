@@ -309,7 +309,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
                 continue
             _labels = self.kmeans.predict(iter_fts.cpu())
             labels.append(torch.tensor(_labels).to(dev))
-        labels = torch.cat(labels)
+        labels = torch.cat(labels).cpu()
         self.means.data = torch.tensor(self.kmeans.cluster_centers_).to(dev)
         self.post_epoch_features = []
         self.post_epoch_weak_features = []
