@@ -271,17 +271,46 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         self.post_epoch_weak_features.append(bbox_feats)
 
     def calculate_pseudo_labels(self):
-        fts = torch.cat(self.post_epoch_features, dim=0)
-        if len(self.post_epoch_weak_features) > 0:
-            weak_fts = torch.cat(self.post_epoch_weak_features, dim=0)
-            fts = torch.cat([fts, weak_fts], dim=0)
+        # if len(self.post_epoch_weak_features) > 0:
+        #     weak_fts = torch.cat(self.post_epoch_weak_features, dim=0)
+        #     fts = torch.cat([fts, weak_fts], dim=0)
         if self.means.sum().cpu().item() == 0:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024)
         else:
             self.kmeans = MiniBatchKMeans(n_clusters=self.k, n_init=1, batch_size=1024,
                                           init=self.means.data.cpu())
-        labels = self.kmeans.fit_predict(fts.cpu())
-        self.means.data = torch.tensor(self.kmeans.cluster_centers_).to(fts.device)
+
+        current_iter = 0
+        dev = self.post_epoch_features[0].device
+        data_to_fit = torch.zeros((1024, self.post_epoch_features[0].shape[1])).to(dev)
+        last_index = 0
+        while current_iter <= len(self.post_epoch_features):
+            iter_fts = self.post_epoch_features[current_iter]
+            if iter_fts is None:
+                current_iter += 1
+                continue
+            n_fts = iter_fts.shape[0]
+            if last_index + n_fts < 1024:
+                data_to_fit[last_index:(last_index + n_fts)] = iter_fts
+                last_index += n_fts
+                current_iter += 1
+            else:
+                fts_to_use = 1024 - (last_index + n_fts)
+                if fts_to_use > 0:
+                    data_to_fit[last_index:(last_index + fts_to_use)] = iter_fts[:fts_to_use]
+                self.kmeans.partial_fit(data_to_fit.cpu())
+                last_index = n_fts - fts_to_use
+                data_to_fit = torch.zeros((1024, self.post_epoch_features[0].shape[1])).to(dev)
+                data_to_fit[:last_index] = iter_fts[last_index:]
+                current_iter += 1
+        labels = []
+        for iter_fts in self.post_epoch_features:
+            if iter_fts is None:
+                continue
+            _labels = self.kmeans.predict(iter_fts.cpu())
+            labels.append(_labels)
+        labels = torch.cat(labels)
+        self.means.data = torch.tensor(self.kmeans.cluster_centers_).to(dev)
         self.post_epoch_features = []
         self.post_epoch_weak_features = []
         total_samples = sum(self.kmeans.counts_)
