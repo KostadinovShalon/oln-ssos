@@ -64,7 +64,12 @@ data = dict(
     samples_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
-            pipeline=train_pipeline),
+        pipeline=train_pipeline,
+        type='VOSBDDSplitDataset'),
+    val=dict(
+            type='VOSBDDSplitDataset'),
+    test=dict(
+            type='VOSBDDSplitDataset'),
 )
 
 load_from = './work_dirs/oln_box_bdd_bs2/epoch_8.pth'
