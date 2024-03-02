@@ -284,7 +284,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         dev = self.post_epoch_features[0].device
         data_to_fit = torch.zeros((1024, self.post_epoch_features[0].shape[1])).to(dev)
         last_index = 0
-        while current_iter <= len(self.post_epoch_features):
+        while current_iter < len(self.post_epoch_features):
             iter_fts = self.post_epoch_features[current_iter]
             if iter_fts is None:
                 current_iter += 1
