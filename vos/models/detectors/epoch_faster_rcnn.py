@@ -29,6 +29,7 @@ def imshow_det_bboxes(img,
                       show=True,
                       wait_time=0,
                       out_file=None,
+                      show_bboxes=True,
                       ood_score=0.):
     """Draw bboxes and class labels (with scores) on an image.
 
@@ -102,9 +103,9 @@ def imshow_det_bboxes(img,
         else:
             # specify  color
             mask_colors = [
-                np.array(mmcv.color_val(mask_color)[::-1], dtype=np.uint8)
-            ] * (
-                max(labels) + 1)
+                              np.array(mmcv.color_val(mask_color)[::-1], dtype=np.uint8)
+                          ] * (
+                                  max(labels) + 1)
 
     bbox_color = color_val_matplotlib(bbox_color)
     text_color = color_val_matplotlib(text_color)
@@ -120,33 +121,34 @@ def imshow_det_bboxes(img,
     polygons = []
     color = []
     for i, (bbox, label) in enumerate(zip(bboxes, labels)):
-        bbox_int = bbox.astype(np.int32)
-        poly = [[bbox_int[0], bbox_int[1]], [bbox_int[0], bbox_int[3]],
-                [bbox_int[2], bbox_int[3]], [bbox_int[2], bbox_int[1]]]
-        np_poly = np.array(poly).reshape((4, 2))
-        polygons.append(Polygon(np_poly))
-        color.append(bbox_color)
-        label_text = ''
-        # label_text = class_names[
-        #     label] if class_names is not None else f'class {label}'
-        if len(bbox) > 4:
-            label_text += f'{bbox[4]:.02f}'
-        if len(bbox) > 5:
-            label_text += f'|{bbox[5]:.07f}'
-        ax.text(
-            bbox_int[0],
-            bbox_int[1],
-            f'{label_text}',
-            bbox={
-                'facecolor': 'black',
-                'alpha': 0.8,
-                'pad': 0.7,
-                'edgecolor': 'none'
-            },
-            color=text_color,
-            fontsize=font_size,
-            verticalalignment='top',
-            horizontalalignment='left')
+        if show_bboxes:
+            bbox_int = bbox.astype(np.int32)
+            poly = [[bbox_int[0], bbox_int[1]], [bbox_int[0], bbox_int[3]],
+                    [bbox_int[2], bbox_int[3]], [bbox_int[2], bbox_int[1]]]
+            np_poly = np.array(poly).reshape((4, 2))
+            polygons.append(Polygon(np_poly))
+            color.append(bbox_color)
+            label_text = ''
+            # label_text = class_names[
+            #     label] if class_names is not None else f'class {label}'
+            if len(bbox) > 4:
+                label_text += f'{bbox[4]:.02f}'
+            if len(bbox) > 5:
+                label_text += f'|{bbox[5]:.07f}'
+            ax.text(
+                bbox_int[0],
+                bbox_int[1],
+                f'{label_text}',
+                bbox={
+                    'facecolor': 'black',
+                    'alpha': 0.8,
+                    'pad': 0.7,
+                    'edgecolor': 'none'
+                },
+                color=text_color,
+                fontsize=font_size,
+                verticalalignment='top',
+                horizontalalignment='left')
         if segms is not None:
             color_mask = mask_colors[labels[i]]
             mask = segms[i].astype(bool)
@@ -171,6 +173,8 @@ def imshow_det_bboxes(img,
             plt.show(block=False)
             plt.pause(wait_time)
             plt.close()
+    # else:
+    #     plt.close()
     return mmcv.rgb2bgr(img)
 
 
@@ -189,6 +193,7 @@ def show_result(classes,
                 show=False,
                 wait_time=0,
                 out_file=None,
+                show_bboxes=True,
                 ood_score=0.):
     """Draw `result` over `img`.
 
@@ -263,12 +268,13 @@ def show_result(classes,
         win_name=win_name,
         fig_size=fig_size,
         show=show,
+        show_bboxes=show_bboxes,
         wait_time=wait_time,
         out_file=out_file,
         ood_score=ood_score)
 
     if not (show or out_file):
-            return img
+        return img
 
 
 @DETECTORS.register_module()
@@ -301,7 +307,9 @@ class EpochFasterRCNN(FasterRCNN):
                     fig_size=(15, 10),
                     show=False,
                     wait_time=0,
-                    out_file=None):
+                    show_bboxes=True,
+                    out_file=None,
+                    ood_thr=None):
         """Draw `result` over `img`.
 
         Args:
@@ -348,7 +356,8 @@ class EpochFasterRCNN(FasterRCNN):
                            show,
                            wait_time,
                            out_file,
-                           ood_score=self.roi_head.bbox_head.ood_score_threshold)
+                           show_bboxes=show_bboxes,
+                           ood_score=self.roi_head.bbox_head.ood_score_threshold if ood_thr is None else ood_thr)
 
 
 @DETECTORS.register_module()
@@ -381,7 +390,9 @@ class EpochMaskRCNN(MaskRCNN):
                     fig_size=(15, 10),
                     show=False,
                     wait_time=0,
-                    out_file=None):
+                    out_file=None,
+                    show_bboxes=True,
+                    ood_thr=None):
         """Draw `result` over `img`.
 
         Args:
@@ -428,4 +439,5 @@ class EpochMaskRCNN(MaskRCNN):
                            show,
                            wait_time,
                            out_file,
-                           ood_score=self.roi_head.bbox_head.ood_score_threshold)
+                           show_bboxes=show_bboxes,
+                           ood_score=self.roi_head.bbox_head.ood_score_threshold if ood_thr is None else ood_thr)

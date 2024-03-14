@@ -33,7 +33,7 @@ def bbox2result_ood(bboxes, labels, ood_scores, num_classes):
             ood_scores = ood_scores.detach().cpu().numpy()
         bboxes_ood = np.hstack((bboxes, ood_scores[:, None]))
         # bboxes_ood is now an N x (4 + 1 + 1 + (K + 1)) tensor
-        return [bboxes_ood[labels == i, :] for i in range(num_classes)]
+        return [bboxes_ood]
 
 
 @HEADS.register_module()
@@ -470,6 +470,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
         bbox_score = bbox_score.split(num_proposals_per_img, 0)
         ood_scores = ood_scores.split(num_proposals_per_img, 0)
         rpn_score = rpn_score.split(num_proposals_per_img, 0)
+        inter_feats = inter_feats.split(num_proposals_per_img, 0)
 
         # some detector with_reg is False, bbox_pred will be None
         if bbox_pred is not None:
@@ -490,7 +491,7 @@ class OLNKMeansVOSRoIHead(OlnRoIHead):
             oods = F.sigmoid(ood_scores[i][:, 0]) if cls_score is not None else None
             det_bbox, det_label, _ood_scores = self.bbox_head.get_bboxes(
                 rois[i],
-                cls_score[i],
+                inter_feats[i],
                 bbox_pred[i],
                 oods,
                 bbox_score[i],

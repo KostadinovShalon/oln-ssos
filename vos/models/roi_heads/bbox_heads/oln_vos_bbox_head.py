@@ -81,6 +81,11 @@ class VOSShared2FCBBoxScoreHead(Shared2FCBBoxScoreHead):
         # heads.
         scores = torch.sqrt(rpn_score * bbox_score.sigmoid())
 
+        # new_scores = torch.zeros_like(cls_score).view(-1)
+        # cls_labels = cls_score.max(dim=1)[1]
+        # cls_labels_1d = cls_labels + torch.arange(cls_labels.shape[0]).to(scores.device) * cls_score.shape[1]
+        # new_scores[cls_labels_1d] = scores.flatten()
+        # scores = new_scores.view(scores.shape[0], -1)
         # Concat dummy zero-scores for the background class.
         scores = torch.cat([scores, torch.zeros_like(scores)], dim=-1)
 
@@ -92,7 +97,8 @@ class VOSShared2FCBBoxScoreHead(Shared2FCBBoxScoreHead):
                                                                                     ood_scores,
                                                                                     None,
                                                                                     cfg.score_thr, cfg.nms,
-                                                                                    cfg.max_per_img)
+                                                                                    cfg.max_per_img,
+                                                                                    ood_score_threshold=cfg.anomaly_threshold)
 
                 return det_bboxes, det_labels, det_ood_scores
         else:
