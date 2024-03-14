@@ -1,0 +1,22 @@
+python3.xx
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y software-properties-common
+sudo apt install -y software-properties-common
+sudo add-apt-repository ppa:deadsnakes/ppa
+sudo apt update
+sudo apt install -y python3.8
+sudo apt-get install python3-dev
+
+sudo apt install python3.8-venv python3.8-distutils
+curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
+python3.8 get-pip.py
+
+
+sudo update-alternatives --config gcc
+
+1.8.1+cu111
+
+pip install mmcv-full==1.2.7 -f https://download.openmmlab.com/mmcv/dist/cu110/torch1.7.1/index.html --no-cache-dir
+
+pip3 install -e .
