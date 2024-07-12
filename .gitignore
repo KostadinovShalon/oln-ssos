@@ -129,3 +129,11 @@ results/
 outputs/
 *.sh
 wandb/
+
+# Project related
+*.npy
+datasets/
+*.pdf
+qualitative/
+results_csv/
+vos_results/

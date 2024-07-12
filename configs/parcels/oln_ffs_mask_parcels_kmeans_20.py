@@ -67,7 +67,7 @@ model = dict(
             num_classes=1,
             class_agnostic=True,
             loss_mask=dict(
-                type='CrossEntropyLoss', use_mask=True, loss_weight=1.0)),
+                type='CrossEntropyLoss', use_mask=True, loss_weight=0.0)),
         mask_iou_head=dict(
             type='OlnMaskIoUHead',
             num_convs=1,
@@ -77,7 +77,7 @@ model = dict(
             conv_out_channels=256,
             fc_out_channels=1024,
             num_classes=1,
-            loss_iou=dict(type='L1Loss', loss_weight=1.0)),
+            loss_iou=dict(type='L1Loss', loss_weight=0.0)),
         start_epoch=4,
         logistic_regression_hidden_dim=512,
         negative_sampling_size=10000,
@@ -85,7 +85,7 @@ model = dict(
         ood_loss_weight=0.1,
         pseudo_label_loss_weight=1.0,
         nll_loss_weight=0.001,
-        k=20,
+        k=100,
         repeat_ood_sampling=1,
         use_all_proposals_ood=False),
     train_cfg=dict(
@@ -229,7 +229,7 @@ data = dict(
         pipeline=test_pipeline),
     test=dict(
         type='VOSParcelsSplitDataset',
-        ann_file='/home/brian/Documents/datasets/gilardoni_parcels/top_view_normal_data.json',
+        ann_file='/home/brian/Documents/datasets/gilardoni_parcels/top_view_normal_data_from_oln.json',
         img_prefix='/home/brian/Documents/datasets/gilardoni_parcels/top-view',
         is_class_agnostic=True,
         train_class='id',
@@ -249,7 +249,7 @@ checkpoint_config = dict(interval=1)
 log_config = dict(interval=50, hooks=[dict(type='TextLoggerHook')])
 dist_params = dict(backend='nccl')
 log_level = 'INFO'
-load_from = 'work_dirs/oln_ffs_mask_db6_kmeans_20_nll0.001/epoch_8.pth'
+load_from = 'work_dirs/oln_ffs_mask_db6_kmeans_100_s4/epoch_8.pth'
 resume_from = None
 workflow = [('train', 1)]
 custom_hooks = [dict(type='SetEpochInfoHook')]

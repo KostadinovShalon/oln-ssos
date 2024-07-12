@@ -252,7 +252,7 @@ def main():
 
     gt_coco_api = COCO(cfg.data.test.ann_file)
     res_coco_api = gt_coco_api.loadRes(results)
-    results_api = COCOeval(gt_coco_api, res_coco_api, iouType=iou_type)
+    results_api = COCOeval(gt_coco_api, res_coco_api, iouType='bbox')
 
     # results_api.params.catIds = np.array([1])
 
