@@ -42,10 +42,10 @@ optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=100,
+    warmup_iters=500,
     warmup_ratio=0.001,
-    step=[5])
-total_epochs = 7
+    step=[4])
+total_epochs = 8
 
 data = dict(
     samples_per_gpu=2,
@@ -60,3 +60,5 @@ data = dict(
 
 load_from = './work_dirs/oln_mask/epoch_8.pth'
 custom_hooks = [dict(type='SetEpochInfoHook')]
+# Runner type
+runner = dict(type='PseudoLabelEpochBasedRunner')

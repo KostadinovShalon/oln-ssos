@@ -1,4 +1,4 @@
-dataset_type = 'DB6SplitDataset'
+dataset_type = 'VOSLtdImagingSplitDataset'
 data_root = 'data/ltdimaging/'
 
 custom_imports = dict(

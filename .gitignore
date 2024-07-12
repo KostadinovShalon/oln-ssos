@@ -127,6 +127,13 @@ token.txt
 
 results/
 outputs/
-datasets/
 *.sh
 wandb/
+
+# Project related
+*.npy
+datasets/
+*.pdf
+qualitative/
+results_csv/
+vos_results/

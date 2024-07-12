@@ -19,7 +19,7 @@ model = dict(
     type='EpochMaskRCNN',
     roi_head=dict(
         type='OLNMaskKMeansVOSRoIHead',
-        start_epoch=0,
+        start_epoch=4,
         logistic_regression_hidden_dim=512,
         negative_sampling_size=10000,
         bottomk_epsilon_dist=1,
@@ -40,13 +40,13 @@ optimizer = dict(type='SGD', lr=0.001, momentum=0.9, weight_decay=0.0001)
 lr_config = dict(
     policy='step',
     warmup='linear',
-    warmup_iters=100,
+    warmup_iters=500,
     warmup_ratio=0.001,
-    step=[5])
-total_epochs = 7
+    step=[7, 11])
+total_epochs = 12
 
 data = dict(
-    samples_per_gpu=16,
+    samples_per_gpu=2,
     workers_per_gpu=2,
     train=dict(
         type=dataset_type),

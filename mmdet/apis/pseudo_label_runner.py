@@ -3,6 +3,7 @@ import tqdm
 from mmcv.runner import EpochBasedRunner
 from mmcv.runner.builder import RUNNERS
 from pycocotools.coco import COCO
+from torchvision.ops import batched_nms
 
 from mmdet.core import bbox2roi
 from mmdet.datasets import RepeatDataset
@@ -41,6 +42,8 @@ class PseudoLabelEpochBasedRunner(EpochBasedRunner):
                     res = self.model.module.roi_head.simple_test(fts, proposal_list, inputs[0]['img_metas'],
                                                                  rescale=False, with_ood=False)
                     bboxes = [res_img[0][0] for res_img in res]
+                    bboxes = [bbox[batched_nms(torch.tensor(bbox[:, :4]), torch.tensor(bbox[:, 4]),
+                                               torch.ones(bbox.shape[0]), 0.5)] for bbox in bboxes]
                     bboxes_filtered = [torch.tensor(b[b[:, 4] > weak_conf_thr, :4]).to(fts[0].device) for b in bboxes]
                     weak_rois = bbox2roi(bboxes_filtered)
 

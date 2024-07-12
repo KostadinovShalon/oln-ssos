@@ -18,7 +18,8 @@ def single_gpu_test(model,
                     data_loader,
                     show=False,
                     out_dir=None,
-                    show_score_thr=0.3):
+                    show_score_thr=0.3,
+                    ood=False):
     model.eval()
     results = []
     dataset = data_loader.dataset
@@ -69,13 +70,21 @@ def single_gpu_test(model,
                     out_file = osp.join(out_dir, img_meta['ori_filename'])
                 else:
                     out_file = None
-
-                model.module.show_result(
-                    img_show,
-                    result[i],
-                    show=show,
-                    out_file=out_file,
-                    score_thr=show_score_thr)
+                if ood:
+                    model.module.show_result(
+                        img_show,
+                        result[i],
+                        show=show,
+                        out_file=out_file,
+                        score_thr=show_score_thr,
+                        mask_color=(0, 0, 255))
+                else:
+                    model.module.show_result(
+                        img_show,
+                        result[i],
+                        show=show,
+                        out_file=out_file,
+                        score_thr=show_score_thr)
 
         # encode mask results
         if isinstance(result[0], tuple):

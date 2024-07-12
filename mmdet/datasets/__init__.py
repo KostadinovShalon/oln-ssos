@@ -5,11 +5,12 @@ from .dataset_wrappers import (ClassBalancedDataset, ConcatDataset,
                                RepeatDataset)
 from .samplers import DistributedGroupSampler, DistributedSampler, GroupSampler
 from .utils import get_loading_pipeline, replace_ImageToTensor
+from .bdd_split import BDDSplitDataset
 
 __all__ = [
     'CustomDataset', 'CocoDataset', 'GroupSampler', 'DistributedGroupSampler',
     'DistributedSampler', 'build_dataloader', 'ConcatDataset', 'RepeatDataset',
     'ClassBalancedDataset', 'DATASETS', 'PIPELINES',
     'build_dataset', 'replace_ImageToTensor', 'get_loading_pipeline'
-    'CocoSplitDataset'
+    'CocoSplitDataset', 'BDDSplitDataset'
 ]

@@ -18,6 +18,7 @@ The following config files are introduced:
 |      configs/oln_mask/oln_mask_model.py      |              Base config file for the OLN-Mask model               |
 |       configs/oln_mask/oln_mask_XXX.py       | Base config file for the OLN-Mask model applied to the XXX dataset |
 |          configs/oln_vos/XXX/YYY.py          |   Config file for a YYY OLN-VOS model applied to the XXX dataset   |
+|          configs/oln_ffs/XXX/YYY.py          | Config file for a YYY OLN-VOS-FFS model applied to the XXX dataset |
 
 ## OLN-VOS Config Parameters
 

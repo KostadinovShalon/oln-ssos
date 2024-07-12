@@ -144,22 +144,21 @@ class OLNKMeansFFSRoIHead(OLNKMeansVOSRoIHead):
         z, sldj = self.flow_model(bbox_results['shared_bbox_feats'][indices_numpy,].detach().cuda())
         nll_loss = self.NLLLoss(z, sldj)
 
-        # if bbox_weak_results is not None:
-        #     weak_selected_fg_samples = (bbox_weak_targets[0] != self.k).nonzero().view(-1)
-        #     weak_indices_numpy = weak_selected_fg_samples.cpu().numpy().astype(int)
-        #     weak_gt_classes_numpy = bbox_weak_targets[0].cpu().numpy().astype(int)
-        #
-        #     weak_box_features = []
-        #     for index in weak_indices_numpy:
-        #         weak_box_features.append(bbox_weak_results['shared_bbox_feats'][index].view(1, -1))
-        #     if len(weak_box_features) == 0:
-        #         weak_box_features = None
-        #     else:
-        #         weak_box_features = torch.cat(weak_box_features, dim=0)
-        # else:
-        #     weak_box_features = None
-        #     weak_indices_numpy = None
-        #     weak_gt_classes_numpy = None
+        if bbox_weak_results is not None:
+            weak_selected_fg_samples = (bbox_weak_targets[0] != self.k).nonzero().view(-1)
+            weak_indices_numpy = weak_selected_fg_samples.cpu().numpy().astype(int)
+            # weak_gt_classes_numpy = bbox_weak_targets[0].cpu().numpy().astype(int)
+
+            weak_box_features = []
+            for index in weak_indices_numpy:
+                weak_box_features.append(bbox_weak_results['shared_bbox_feats'][index].view(1, -1))
+            if len(weak_box_features) == 0:
+                weak_box_features = None
+            else:
+                weak_box_features = torch.cat(weak_box_features, dim=0)
+        else:
+            weak_box_features = None
+            # weak_gt_classes_numpy = None
 
         gt_box_features = []
         for index in indices_numpy:
@@ -177,11 +176,11 @@ class OLNKMeansFFSRoIHead(OLNKMeansVOSRoIHead):
                 gt_pseudo_logits = self.pseudo_score(bbox_results['shared_bbox_feats'])
             gt_pseudo_labels = bbox_targets[0][selected_fg_samples]
 
-            # if weak_box_features is not None:
-            #     weak_pseudo_logits = self.pseudo_score(weak_box_features)
-            #     weak_pseudo_labels = bbox_weak_targets[0][weak_selected_fg_samples]
-            #     gt_pseudo_logits = torch.cat([gt_pseudo_logits, weak_pseudo_logits], dim=0)
-            #     gt_pseudo_labels = torch.cat([gt_pseudo_labels, weak_pseudo_labels], dim=0)
+            if weak_box_features is not None:
+                weak_pseudo_logits = self.pseudo_score(weak_box_features)
+                weak_pseudo_labels = bbox_weak_targets[0][weak_selected_fg_samples]
+                gt_pseudo_logits = torch.cat([gt_pseudo_logits, weak_pseudo_logits], dim=0)
+                gt_pseudo_labels = torch.cat([gt_pseudo_labels, weak_pseudo_labels], dim=0)
             loss_pseudo_score = self.loss_pseudo_cls(gt_pseudo_logits, gt_pseudo_labels.long())
             if self.epoch >= self.start_epoch:
                 with torch.no_grad():

@@ -16,7 +16,8 @@ perform anomaly detection on an object level. We dub this method **OLN-VOS**.
 This repo is based on the OLN repo. The installation follows the same instructions. Additionally, scitkit-learn==1.0.2 is needed.
 
 ## Config files
-A description of the new config file options is detailed [here](docs/oln_vos_config_files.md). 
+A description of the new config file options is detailed [here](docs/oln_vos_config_files.md). Additionally, a
+more detailed documentation about the new classes and hyperparameters is described [here](docs/oln_vos_hyperparameters.md).
 
 ## Training
 Training is done similar to MMDet 2.x, but with the train_pseudo_label.py file:
@@ -31,11 +32,11 @@ the anomaly threshold, which enforces that 95% of the normal data is classified 
 ```
 python tools/test_ood_det.py <CONFIG FILE PATH> <CHECKPOINT FILE PATH> --mode id [OPTIONS...]
 ```
-Then, test the OoD data with the resulting anomaly threshoild. The optimal score threshold should only be used for visualization. The same config file
+Then, test the OoD data with the resulting anomaly threshold. The optimal score threshold is only used for visualization. The same config file
 can be used but the config parameters pointing to the normal test dataset should be modified via the `---cfg-optioons` option:
 
 ```
-python tools/test_ood_det.py <CONFIG FILE PATH> <CHECKPOINT FILE PATH> --mode ood --cfg-options "data.test.ann_file='<PATH>'" "data.test.img_prefix='<PREFIX>'"  --optimal-score-thr 0.0  --anomaly-threshold 0.XXX [OPTIONS...]
+python tools/test_ood_det.py <CONFIG FILE PATH> <CHECKPOINT FILE PATH> --mode ood --cfg-options "data.test.ann_file='<PATH>'" "data.test.img_prefix='<PREFIX>'" --anomaly-threshold 0.XXX [OPTIONS...]
 ```
 
 Some [example scripts](scripts/) are available. The script will show the COCO metrics of the detected anomalies.

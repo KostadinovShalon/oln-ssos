@@ -27,26 +27,26 @@ def parse_args():
     parser.add_argument('checkpoint', help='checkpoint file')
     parser.add_argument('--out', help='output result file in pickle format of the id dataset')
     parser.add_argument('--mode', default='id', choices=['id', 'ood'])
-    parser.add_argument('--optimal-score-threshold', type=float)
+    parser.add_argument('--optimal-score-threshold', type=float, default=0.)
     parser.add_argument('--anomaly-threshold', type=float)
     parser.add_argument('--results-file')
     parser.add_argument(
         '--fuse-conv-bn',
         action='store_true',
         help='Whether to fuse conv and bn, this will slightly increase'
-        'the inference speed')
+             'the inference speed')
     parser.add_argument(
         '--format-only',
         action='store_true',
         help='Format the output results without perform evaluation. It is'
-        'useful when you want to format the result to a specific format and '
-        'submit it to the test server')
+             'useful when you want to format the result to a specific format and '
+             'submit it to the test server')
     parser.add_argument(
         '--eval',
         type=str,
         nargs='+',
         help='evaluation metrics, which depends on the dataset, e.g., "bbox",'
-        ' "segm", "proposal" for COCO, and "mAP", "recall" for PASCAL VOC. This is only done for the id dataset')
+             ' "segm", "proposal" for COCO, and "mAP", "recall" for PASCAL VOC. This is only done for the id dataset')
     parser.add_argument('--show', action='store_true', help='show id results')
     parser.add_argument(
         '--show-dir', help='directory where painted images will be saved')
@@ -62,30 +62,30 @@ def parse_args():
     parser.add_argument(
         '--tmpdir',
         help='tmp directory used for collecting results from multiple '
-        'workers, available when gpu-collect is not specified')
+             'workers, available when gpu-collect is not specified')
     parser.add_argument(
         '--cfg-options',
         nargs='+',
         action=DictAction,
         help='override some settings in the used config, the key-value pair '
-        'in xxx=yyy format will be merged into config file. If the value to '
-        'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
-        'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
-        'Note that the quotation marks are necessary and that no white space '
-        'is allowed.')
+             'in xxx=yyy format will be merged into config file. If the value to '
+             'be overwritten is a list, it should be like key="[a,b]" or key=a,b '
+             'It also allows nested list/tuple values, e.g. key="[(a,b),(c,d)]" '
+             'Note that the quotation marks are necessary and that no white space '
+             'is allowed.')
     parser.add_argument(
         '--options',
         nargs='+',
         action=DictAction,
         help='custom options for evaluation, the key-value pair in xxx=yyy '
-        'format will be kwargs for dataset.evaluate() function (deprecate), '
-        'change to --eval-options instead.')
+             'format will be kwargs for dataset.evaluate() function (deprecate), '
+             'change to --eval-options instead.')
     parser.add_argument(
         '--eval-options',
         nargs='+',
         action=DictAction,
         help='custom options for evaluation, the key-value pair in xxx=yyy '
-        'format will be kwargs for dataset.evaluate() function')
+             'format will be kwargs for dataset.evaluate() function')
     parser.add_argument(
         '--launcher',
         choices=['none', 'pytorch', 'slurm', 'mpi'],
@@ -167,8 +167,8 @@ def main():
             init_dist(args.launcher, **cfg.dist_params)
 
         # build the dataloader
-        if args.mode == 'ood' and (optimal_score_threshold is None or anomaly_score_threshold is None):
-            raise ValueError('Optimal Scores and Anomaly Scores needed for OOD ')
+        # if args.mode == 'ood' and (optimal_score_threshold is None or anomaly_score_threshold is None):
+        #     raise ValueError('Optimal Scores and Anomaly Scores needed for OOD ')
 
         dataset = build_dataset(cfg.data.test)
         data_loader = build_dataloader(
@@ -203,7 +203,7 @@ def main():
             show_dir = args.show_dir
             sc_th = args.show_score_thr if args.mode == 'id' else optimal_score_threshold
             outputs = single_gpu_test(model, data_loader, show, show_dir,
-                                      sc_th)
+                                      sc_th, ood=args.mode == "ood")
         else:
             model = MMDistributedDataParallel(
                 model.cuda(),
@@ -223,8 +223,8 @@ def main():
                 eval_kwargs = cfg.get('evaluation', {}).copy()
                 # hard-code way to remove EvalHook args
                 for key in [
-                        'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
-                        'rule'
+                    'interval', 'tmpdir', 'start', 'gpu_collect', 'save_best',
+                    'rule'
                 ]:
                     eval_kwargs.pop(key, None)
                 eval_kwargs.update(dict(metric=args.eval, **kwargs))
@@ -248,11 +248,11 @@ def main():
             r['category_id'] = 1
     if args.mode == 'ood':
         results = [r for r in results if r['score'] > optimal_score_threshold
-                           and r['ood_score'] < anomaly_score_threshold]
+                   and r['ood_score'] < anomaly_score_threshold]
 
     gt_coco_api = COCO(cfg.data.test.ann_file)
     res_coco_api = gt_coco_api.loadRes(results)
-    results_api = COCOeval(gt_coco_api, res_coco_api, iouType=iou_type)
+    results_api = COCOeval(gt_coco_api, res_coco_api, iouType='bbox')
 
     # results_api.params.catIds = np.array([1])
 
@@ -261,32 +261,65 @@ def main():
     results_api.evaluate()
     results_api.accumulate()
     results_api.summarize()
+    data_to_print = ",".join([f"{i*100:.1f}" for i in results_api.stats])
     if args.mode == 'id':
         # Compute optimal micro F1 score threshold. We compute the f1 score for
         # every class and score threshold. We then compute the score threshold that
         # maximizes the F-1 score of every class. The final score threshold is the average
         # over all classes.
-        if optimal_score_threshold is None:
-            precisions = results_api.eval['precision'].mean(0)[:, :, 0, 2]
-            recalls = np.expand_dims(results_api.params.recThrs, 1)
-            f1_scores = 2 * (precisions * recalls) / (precisions + recalls)
-            optimal_f1_score = f1_scores.argmax(0)
-            scores = results_api.eval['scores'].mean(0)[:, :, 0, 2]
-            optimal_score_threshold = [scores[optimal_f1_score_i, i]
-                                       for i, optimal_f1_score_i in enumerate(optimal_f1_score)]
-            optimal_score_threshold = np.array(optimal_score_threshold)
-            optimal_score_threshold = optimal_score_threshold[optimal_score_threshold != 0]
-            optimal_score_threshold = optimal_score_threshold.mean()
-            print("Optimal score threshold: ", optimal_score_threshold)
-        if anomaly_score_threshold is None:
-            dt_ids_with_match = [int(dt_id) for ev_im in results_api.evalImgs for dt_id in ev_im['gtMatches'][0] if
-                                 dt_id > 0]
-            valid_detections = list(results_api.cocoDt.anns.values())#results_api.cocoDt.loadAnns(dt_ids_with_match)
-            optimal_detections = [v for v in valid_detections if v['score'] > optimal_score_threshold]
-            ood_scores = [o['ood_score'] for o in optimal_detections]
-            ood_scores.sort()
-            anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
-        print("Anomaly Score Threshold: ", anomaly_score_threshold)
+        # if optimal_score_threshold is None:
+        precisions = results_api.eval['precision'].mean(0)[:, :, 0, 2]
+        recalls = np.expand_dims(results_api.params.recThrs, 1)
+        f1_scores = 2 * (precisions * recalls) / (precisions + recalls)
+        optimal_f1_score = f1_scores.argmax(0)
+        scores = results_api.eval['scores'].mean(0)[:, :, 0, 2]
+        optimal_score_threshold = [scores[optimal_f1_score_i, i]
+                                   for i, optimal_f1_score_i in enumerate(optimal_f1_score)]
+        optimal_score_threshold = np.array(optimal_score_threshold)
+        optimal_score_threshold = optimal_score_threshold[optimal_score_threshold != 0]
+        optimal_score_threshold = optimal_score_threshold.mean()
+        print("Optimal score threshold: ", optimal_score_threshold)
+
+        dt_ids_with_match = [int(dt_id) for ev_im in results_api.evalImgs for dt_id in ev_im['gtMatches'][0] if
+                             dt_id > 0]
+        dt_ids_with_match = list(set(dt_ids_with_match))
+        valid_detections = results_api.cocoDt.loadAnns(dt_ids_with_match)  # list(results_api.cocoDt.anns.values())#
+        ood_scores = [o['ood_score'] for o in valid_detections]
+        ood_scores.sort()
+        anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
+        print("Non OS Detected Anomaly Score Threshold: ", anomaly_score_threshold)
+        data_to_print += f',{anomaly_score_threshold:.5f}'
+        valid_detections = results_api.cocoDt.anns.values()  # list(results_api.cocoDt.anns.values())#
+        ood_scores = [o['ood_score'] for o in valid_detections]
+        ood_scores.sort()
+        anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
+        print("Non OS All Anomaly Score Threshold: ", anomaly_score_threshold)
+        data_to_print += f',{anomaly_score_threshold:.5f}'
+        dt_ids_with_match = [int(dt_id) for ev_im in results_api.evalImgs for dt_id in ev_im['gtMatches'][0] if
+                             dt_id > 0]
+        dt_ids_with_match = list(set(dt_ids_with_match))
+        valid_detections = results_api.cocoDt.loadAnns(dt_ids_with_match)  # list(results_api.cocoDt.anns.values())#
+        optimal_detections = [v for v in valid_detections if v['score'] > optimal_score_threshold]
+        ood_scores = [o['ood_score'] for o in optimal_detections]
+        ood_scores.sort()
+        anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
+        print("Detected Anomaly Score Threshold: ", anomaly_score_threshold)
+        data_to_print += f',{anomaly_score_threshold:.5f}'
+        valid_detections = results_api.cocoDt.anns.values()  # list(results_api.cocoDt.anns.values())#
+        optimal_detections = [v for v in valid_detections if v['score'] > optimal_score_threshold]
+        ood_scores = [o['ood_score'] for o in optimal_detections]
+        ood_scores.sort()
+        anomaly_score_threshold = ood_scores[int(len(ood_scores) * 0.05)]
+        print("All Anomaly Score Threshold: ", anomaly_score_threshold)
+        data_to_print += f',{anomaly_score_threshold:.5f}'
+    if args.mode == 'id':
+        os.makedirs("results_csv/id", exist_ok=True)
+        output_file_name = os.path.join("results_csv", "id", cfg.filename.rsplit('/', 1)[1].rsplit('.', 1)[0] + ".csv")
+    else:
+        os.makedirs("results_csv/ood", exist_ok=True)
+        output_file_name = os.path.join("results_csv", "ood", cfg.filename.rsplit('/', 1)[1].rsplit('.', 1)[0] + ".csv")
+    with open(output_file_name, "w") as f:
+        f.write(data_to_print)
 
 
 if __name__ == '__main__':
