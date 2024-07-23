@@ -6,19 +6,29 @@ layout: test
 ---
 ## Abstract
 
-Neural Radiance Fields (NeRF) have attracted significant attention due to their ability to synthesize novel scene views with great accuracy. However, inherent to their underlying formulation, the sampling of points along a ray with zero width may result in ambiguous representations that lead to further rendering artifacts such as aliasing in the final scene. To address this issue, the recent variant mip-NeRF proposes an Integrated Positional Encoding (IPE) based on a conical view frustum. Although this is expressed with an integral formulation, mip-NeRF instead approximates this integral as the expected value of a multivariate Gaussian distribution. This approximation is reliable for short frustums but degrades with highly elongated regions, which arises when dealing with distant scene objects under a larger depth of field. In this paper, we explore the use of an exact approach for calculating the IPE by using a pyramid-based integral formulation instead of an approximated conical-based one. We denote this formulation as Exact-NeRF and contribute the first approach to offer a precise analytical solution to the IPE within the NeRF domain. Our exploratory work illustrates that such an exact formulation Exact-NeRF matches the accuracy of mip-NeRF and furthermore provides a natural extension to more challenging scenarios without further modification, such as in the case of unbounded scenes. Our contribution aims to both address the hitherto unexplored issues of frustum approximation in earlier NeRF work and additionally provide insight into the potential future consideration of analytical solutions in future NeRF extensions.
+Object detection is a pivotal task in computer vision that has received significant attention in previous years. Nonetheless, the capability of a detector to localise objects out of the training distribution remains unexplored. Whilst recent approaches in object-level out-of-distribution (OoD) detection heavily rely on class labels, such approaches contradict truly open-world scenarios where the class distribution is often unknown. In this context, anomaly detection focuses on detecting unseen instances rather than classifying detections as OoD. This work aims to bridge this gap by leveraging an open-world object detector and an OoD detector via virtual outlier synthesis. This is achieved by using the detector backbone features to first learn object pseudo-classes via self-supervision. These pseudo-classes serve as the basis for class-conditional virtual outlier sampling of anomalous features that are classified by an OoD head. Our approach empowers our overall object detector architecture to learn anomaly-aware feature representations without relying on class labels, hence enabling truly open-world object anomaly detection. Empirical validation of our approach demonstrates its effectiveness across diverse datasets encompassing various imaging modalities (visible, infrared, and X-ray). Moreover, our method establishes state-of-the-art performance on object-level anomaly detection, achieving an average recall score improvement of over 5.4% for natural images and 23.5% for a security X-ray dataset compared to the current approaches. In addition, our method detects anomalies in datasets where current approaches fail. Code available at <a href="https://github.com/KostadinovShalon/oln-ssos">https://github.com/KostadinovShalon/oln-ssos</a>.
 
-## Video
-<div class="videoWrapper">
- <iframe width="560" height="315" src="https://www.youtube.com/embed/-R5qoEaZurE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-</div>
+[//]: # (## Video)
+
+[//]: # (<div class="videoWrapper">)
+
+[//]: # ( <iframe width="560" height="315" src="https://www.youtube.com/embed/-R5qoEaZurE" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>)
+
+[//]: # (</div>)
 
 ## Citation
     {% raw %}
-    @article{isaac-medina2023exactnerf,
-        title={{Exact-NeRF}: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields},
-         author={Brian K. S. Isaac-Medina and Chris G. Willcocks and Toby P. Breckon},
-        year={2023},
-        journal={CVPR}
+    @inproceedings{isaac-medina24oln-ssos,
+     author = {Isaac-Medina, B.K.S. and Gaus, Y.F.A. and Bhowmik, N. and Breckon, T.P.},
+     title = {Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis},
+     booktitle = {Proc. European Conference on Computer Vision },
+     year = {2024},
+     month = {September},
+     publisher = {Springer},
+     keywords = {x-ray, thermal, anomaly detection, open world object detection, open-set anonaly detection, object-wise anomaly detection},
+     url = {https://breckon.org/toby/publications/papers/isaac24ssos.pdf},
+     arxiv = {https://arxiv.org/abs/2407.15763},
+     note = {to appear},
+     category = {anomaly baggage automotive},
     }
     {% endraw %}
