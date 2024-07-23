@@ -18,7 +18,7 @@
 # You can create any custom variable you would like, and they will be accessible
 # in the templates via {{ site.myvariable }}.
 
-title: "Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields"
+title: "Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis"
 email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
   Write an awesome description for your new site here. You can edit this
@@ -30,22 +30,25 @@ authors:
   - link: https://kostadinovshalon.github.io
     name: Brian K. S. Isaac-Medina
     institution: Durham University
-  - link: https://cwkx.github.io/
-    name: Chris Willcocks
+  - link: https://yonafalinie.github.io/
+    name: Yona Falinie Abd. Gaus
+    institution: Durham University
+  - link: https://www.durham.ac.uk/staff/neelanjan-bhowmik/
+    name: Neelanjan Bhowmik
     institution: Durham University
   - link: https://breckon.org/breckon
     name: Toby Breckon
     institution: Durham University
 links:
   - img: images/paper-icon.png
-    link: https://arxiv.org/abs/2211.12285
+    link: https://arxiv.org/abs/2407.15763
     title: Paper
   - img: images/github-icon.png
-    link: https://github.com/KostadinovShalon/exact-nerf
+    link: https://github.com/KostadinovShalon/oln-ssos
     title: Code
-  - img: images/yt.ico
-    link: https://youtu.be/1ck25jJdw7A
-    title: Video
+#  - img: images/yt.ico
+#    link: https://youtu.be/1ck25jJdw7A
+#    title: Video
 # Build settings
 theme: minima
 plugins:
