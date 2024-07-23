@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="{{ page.lang | default: site.lang | default: "en" }}">
+    {%- include head.html -%}
+    <style>
+        .list-inline {
+            list-style: none;
+            margin-left: -0.5em;
+            margin-right: -0.5em;
+            padding-left: 0;
+        }
+
+        .list-inline > li {
+            display: inline-block;
+            margin-left: 0.5em;
+            margin-right: 0.5em;
+        }
+
+        strong {
+        font-family: 'Lato', Verdana, Helvetica, sans-serif;
+        font-size: 14px;
+        }
+
+        a {
+            color: #1772d0;
+            text-decoration: none;
+            }
+
+            a:focus,
+            a:hover {
+            color: #f09228;
+            text-decoration: none;
+            }
+            .videoWrapper {
+        position: relative;
+        padding-bottom: 56.25%;
+        /* 16:9 */
+        padding-top: 25px;
+        height: 0;
+        }
+
+        .videoWrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        }
+    </style>
+  <body>
+    <div class="container" id="main" aria-label="Content">
+
+            {% assign authors = site.authors %}
+            {% assign links = site.links %}
+            
+            <div class="row">
+            {%- if site.title -%}
+                <h2 class="col-md-12 text-center">{{ site.title }}</h2>
+            {%- endif -%}
+            </div>
+
+            {% if authors.size > 0 %}
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <ul class="list-inline">
+                        {% for author in authors %}
+                            <li>
+                                <a href="{{author.link}}"><h4>{{author.name}}</h4></a>
+                                {{author.institution}}
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if links.size > 0 %}
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <ul class="nav nav-pills nav-justified">
+                        {% for link in links %}
+                            <li>
+                                <a href="{{link.link}}">
+                                    <image src="{{link.img}}" height="60px">
+                                    <br>
+                                    <h4><strong>{{link.title}}</strong></h4>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            {% endif %}
+            
+          
+            {{ content }}  
+            
+          
+    </div>
+    
+  </body>
+
+</html>

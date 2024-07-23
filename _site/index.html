@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields | Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.</title>
+<meta name="generator" content="Jekyll v4.3.2" />
+<meta property="og:title" content="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description." />
+<meta property="og:description" content="Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description." />
+<link rel="canonical" href="http://localhost:4000/" />
+<meta property="og:url" content="http://localhost:4000/" />
+<meta property="og:site_name" content="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
+<meta property="og:type" content="website" />
+<meta name="twitter:card" content="summary" />
+<meta property="twitter:title" content="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebSite","description":"Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.","headline":"Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields","name":"Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields","url":"http://localhost:4000/"}</script>
+<!-- End Jekyll SEO tag -->
+<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.8.0/codemirror.min.css"> </head><style>
+        .list-inline {
+            list-style: none;
+            margin-left: -0.5em;
+            margin-right: -0.5em;
+            padding-left: 0;
+        }
+
+        .list-inline > li {
+            display: inline-block;
+            margin-left: 0.5em;
+            margin-right: 0.5em;
+        }
+
+        strong {
+        font-family: 'Lato', Verdana, Helvetica, sans-serif;
+        font-size: 14px;
+        }
+
+        a {
+            color: #1772d0;
+            text-decoration: none;
+            }
+
+            a:focus,
+            a:hover {
+            color: #f09228;
+            text-decoration: none;
+            }
+            .videoWrapper {
+        position: relative;
+        padding-bottom: 56.25%;
+        /* 16:9 */
+        padding-top: 25px;
+        height: 0;
+        }
+
+        .videoWrapper iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        }
+    </style>
+  <body>
+    <div class="container" id="main" aria-label="Content">
+
+            
+            
+            
+            <div class="row"><h2 class="col-md-12 text-center">Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields</h2></div>
+
+            
+            <div class="row">
+                <div class="col-md-12 text-center">
+                    <ul class="list-inline">
+                        
+                            <li>
+                                <a href="https://kostadinovshalon.github.io"><h4>Brian K. S. Isaac-Medina</h4></a>
+                                Durham University
+                            </li>
+                        
+                            <li>
+                                <a href="https://kostadinovshalon.github.io"><h4>Chris Willcocks</h4></a>
+                                Durham University
+                            </li>
+                        
+                            <li>
+                                <a href="https://breckon.org/breckon"><h4>Toby Breckon</h4></a>
+                                Durham University
+                            </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+
+            
+            <div class="row">
+                <div class="col-md-4 col-md-offset-4 text-center">
+                    <ul class="nav nav-pills nav-justified">
+                        
+                            <li>
+                                <a href="https://arxiv.org/abs/2211.12285">
+                                    <image src="images/paper-icon.png" height="60px">
+                                    <br>
+                                    <h4><strong>Paper</strong></h4>
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https://github.com/KostadinovShalon/exact-nerf">
+                                    <image src="images/github-icon.png" height="60px">
+                                    <br>
+                                    <h4><strong>Code</strong></h4>
+                                </a>
+                            </li>
+                        
+                            <li>
+                                <a href="https://youtu.be/-R5qoEaZurE">
+                                    <image src="images/yt.ico" height="60px">
+                                    <br>
+                                    <h4><strong>Video</strong></h4>
+                                </a>
+                            </li>
+                        
+                    </ul>
+                </div>
+            </div>
+            
+            
+          
+            <h2 id="abstract">Abstract</h2>
+
+<p>Neural Radiance Fields (NeRF) have attracted significant attention due to their ability to synthesize novel scene views with great accuracy. However, inherent to their underlying formulation, the sampling of points along a ray with zero width may result in ambiguous representations that lead to further rendering artifacts such as aliasing in the final scene. To address this issue, the recent variant mip-NeRF proposes an Integrated Positional Encoding (IPE) based on a conical view frustum. Although this is expressed with an integral formulation, mip-NeRF instead approximates this integral as the expected value of a multivariate Gaussian distribution. This approximation is reliable for short frustums but degrades with highly elongated regions, which arises when dealing with distant scene objects under a larger depth of field. In this paper, we explore the use of an exact approach for calculating the IPE by using a pyramid-based integral formulation instead of an approximated conical-based one. We denote this formulation as Exact-NeRF and contribute the first approach to offer a precise analytical solution to the IPE within the NeRF domain. Our exploratory work illustrates that such an exact formulation Exact-NeRF matches the accuracy of mip-NeRF and furthermore provides a natural extension to more challenging scenarios without further modification, such as in the case of unbounded scenes. Our contribution aims to both address the hitherto unexplored issues of frustum approximation in earlier NeRF work and additionally provide insight into the potential future consideration of analytical solutions in future NeRF extensions.</p>
+
+<h2 id="video">Video</h2>
+<div class="videoWrapper">
+ <iframe width="560" height="315" src="https://youtu.be/1ck25jJdw7A" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen=""></iframe>
+</div>
+
+<h2 id="citation">Citation</h2>
+
+<div class="language-plaintext highlighter-rouge"><div class="highlight"><pre class="highlight"><code>@article{isaac-medina2023exactnerf,
+    title={{Exact-NeRF}: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields},
+     author={Brian K. S. Isaac-Medina and Chris G. Willcocks and Toby P. Breckon},
+    year={2023},
+    journal={CVPR}
+}
+</code></pre></div></div>
+
+  
+            
+          
+    </div>
+    
+  </body>
+
+</html>
