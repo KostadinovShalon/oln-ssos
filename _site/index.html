@@ -1,148 +1,157 @@
 <!DOCTYPE html>
-<html lang="en"><head>
-    <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1"><!-- Begin Jekyll SEO tag v2.8.0 -->
-<title>Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis</title>
-<meta name="generator" content="Jekyll v4.3.2" />
-<meta property="og:title" content="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
+<html lang="en-US">
+  <head>
+    <meta charset="UTF-8">
+
+<!-- Begin Jekyll SEO tag v2.8.0 -->
+<title>Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis | Accepted at ECCV 2024</title>
+<meta name="generator" content="Jekyll v3.9.5" />
+<meta property="og:title" content="Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis" />
 <meta property="og:locale" content="en_US" />
-<meta name="description" content="Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description." />
-<meta property="og:description" content="Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description." />
+<meta name="description" content="Accepted at ECCV 2024" />
+<meta property="og:description" content="Accepted at ECCV 2024" />
 <link rel="canonical" href="http://localhost:4000/" />
 <meta property="og:url" content="http://localhost:4000/" />
-<meta property="og:site_name" content="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
+<meta property="og:site_name" content="Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis" />
 <meta property="og:type" content="website" />
 <meta name="twitter:card" content="summary" />
-<meta property="twitter:title" content="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
+<meta property="twitter:title" content="Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis" />
 <script type="application/ld+json">
-{"@context":"https://schema.org","@type":"WebSite","description":"Write an awesome description for your new site here. You can edit this line in _config.yml. It will appear in your document head meta (for Google search results) and in your feed.xml site description.","headline":"Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields","name":"Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields","url":"http://localhost:4000/"}</script>
+{"@context":"https://schema.org","@type":"WebSite","description":"Accepted at ECCV 2024","headline":"Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis","name":"Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis","url":"http://localhost:4000/"}</script>
 <!-- End Jekyll SEO tag -->
-<link rel="stylesheet" href="/assets/css/style.css"><link type="application/atom+xml" rel="alternate" href="http://localhost:4000/feed.xml" title="Exact-NeRF: An Exploration of a Precise Volumetric Parameterization for Neural Radiance Fields" />
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
-<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.8.0/codemirror.min.css"> </head><style>
-        .list-inline {
-            list-style: none;
-            margin-left: -0.5em;
-            margin-right: -0.5em;
-            padding-left: 0;
-        }
 
-        .list-inline > li {
-            display: inline-block;
-            margin-left: 0.5em;
-            margin-right: 0.5em;
-        }
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="preload" href="https://fonts.googleapis.com/css?family=Open+Sans:400,700&display=swap" as="style" type="text/css" crossorigin>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#157878">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="/assets/css/style.css?v=44522376957670227d945bc63d775581895f9d24">
+    <!-- start custom head snippets, customize with your own _includes/head-custom.html file -->
 
-        strong {
-        font-family: 'Lato', Verdana, Helvetica, sans-serif;
-        font-size: 14px;
-        }
+<!-- Setup Google Analytics -->
 
-        a {
-            color: #1772d0;
-            text-decoration: none;
+
+
+<!-- You can set your favicon here -->
+<!-- link rel="shortcut icon" type="image/x-icon" href="/favicon.ico" -->
+
+<!-- end custom head snippets -->
+
+
+      <style>
+          .row {
+              display: flex;
+              justify-content: center;
+            }
+            div.row ul {
+              display: flex;
+              list-style: none;
             }
 
-            a:focus,
-            a:hover {
-            color: #f09228;
-            text-decoration: none;
+            div.row  li {
+              margin: 0 10px;
             }
-            .videoWrapper {
-        position: relative;
-        padding-bottom: 56.25%;
-        /* 16:9 */
-        padding-top: 25px;
-        height: 0;
-        }
+            .project-tagline {
+              margin-bottom: 0;
+            }
+            .page-header{
+                padding: 3rem 2rem;
+                background-image: url(images/banner1.jpg);
+                  box-shadow: inset 0 0 0 2000px rgba(104, 36, 109, 0.9);
+            }
+            .links{
+                margin: 20px 0;
+            }
+            .author-name{
+                color: white;
+            }
+            img.enlargeable {
+                transition:transform 0.25s ease;
+            }
 
-        .videoWrapper iframe {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        }
-    </style>
+            img.enlargeable:hover {
+                -webkit-transform:scale(1.5); /* or some other value */
+                transform:scale(1.5);
+            }
+      </style>
+  </head>
   <body>
-    <div class="container" id="main" aria-label="Content">
-            <div class="row"><h2 class="col-md-12 text-center">Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis</h2></div>
+    <header class="page-header" role="banner">
 
-            
+   
+   
+      <h1 class="project-name">Towards Open-World Object-based Anomaly Detection via Self-Supervised Outlier Synthesis</h1>
+      <h2 class="project-tagline">Accepted at ECCV 2024</h2>
+        
             <div class="row">
-                <div class="col-md-12 text-center">
                     <ul class="list-inline">
                         
-                            <li>
-                                <a href="https://kostadinovshalon.github.io"><h4>Brian K. S. Isaac-Medina</h4></a>
+                            <li class="element-list-inline">
+                                <a class='author-name' href="https://kostadinovshalon.github.io"><h4>Brian K. S. Isaac-Medina</h4></a>
                                 Durham University
                             </li>
                         
-                            <li>
-                                <a href="https://yonafalinie.github.io"><h4>Yona Falinie A. Gaus</h4></a>
-                                Durham University
-                            </li>
-
-                            <li>
-                                <a href="https://www.durham.ac.uk/staff/neelanjan-bhowmik/"><h4>Neelanjan Bhowmik</h4></a>
+                            <li class="element-list-inline">
+                                <a class='author-name' href="https://yonafalinie.github.io/"><h4>Yona Falinie Abd. Gaus</h4></a>
                                 Durham University
                             </li>
                         
-                            <li>
-                                <a href="https://breckon.org/breckon"><h4>Toby Breckon</h4></a>
+                            <li class="element-list-inline">
+                                <a class='author-name' href="https://www.durham.ac.uk/staff/neelanjan-bhowmik/"><h4>Neelanjan Bhowmik</h4></a>
+                                Durham University
+                            </li>
+                        
+                            <li class="element-list-inline">
+                                <a class='author-name' href="https://breckon.org/breckon"><h4>Toby Breckon</h4></a>
                                 Durham University
                             </li>
                         
                     </ul>
-                </div>
             </div>
             
 
             
             <div class="row">
-                <div class="col-md-4 col-md-offset-4 text-center">
-                    <ul class="nav nav-pills nav-justified">
+                <ul class="list-inline">
                         
-                            <li>
+                            <li class="element-list-inline links">
                                 <a href="https://arxiv.org/abs/2407.15763">
-                                    <image src="images/paper-icon.png" height="60px">
+                                    <image src="images/paper-icon.png" height="60px"/>
                                     <br>
                                     <h4><strong>Paper</strong></h4>
                                 </a>
                             </li>
                         
-                            <li>
+                            <li class="element-list-inline links">
                                 <a href="https://github.com/KostadinovShalon/oln-ssos">
-                                    <image src="images/github-icon.png" height="60px">
+                                    <image src="images/github-icon.png" height="60px"/>
                                     <br>
                                     <h4><strong>Code</strong></h4>
                                 </a>
                             </li>
-<!--                        -->
-<!--                            <li>-->
-<!--                                <a href="https://youtu.be/-R5qoEaZurE">-->
-<!--                                    <image src="images/yt.ico" height="60px">-->
-<!--                                    <br>-->
-<!--                                    <h4><strong>Video</strong></h4>-->
-<!--                                </a>-->
-<!--                            </li>-->
                         
-                    </ul>
-                </div>
+                </ul>
             </div>
             
-            
-          
-            <h2 id="abstract">Abstract</h2>
+      
+    </header>
 
-<p>Object detection is a pivotal task in computer vision that has received significant attention in previous years. Nonetheless, the capability of a detector to localise objects out of the training distribution remains unexplored. Whilst recent approaches in object-level out-of-distribution (OoD) detection heavily rely on class labels, such approaches contradict truly open-world scenarios where the class distribution is often unknown. In this context, anomaly detection focuses on detecting unseen instances rather than classifying detections as OoD. This work aims to bridge this gap by leveraging an open-world object detector and an OoD detector via virtual outlier synthesis. This is achieved by using the detector backbone features to first learn object pseudo-classes via self-supervision. These pseudo-classes serve as the basis for class-conditional virtual outlier sampling of anomalous features that are classified by an OoD head. Our approach empowers our overall object detector architecture to learn anomaly-aware feature representations without relying on class labels, hence enabling truly open-world object anomaly detection. Empirical validation of our approach demonstrates its effectiveness across diverse datasets encompassing various imaging modalities (visible, infrared, and X-ray). Moreover, our method establishes state-of-the-art performance on object-level anomaly detection, achieving an average recall score improvement of over 5.4% for natural images and 23.5% for a security X-ray dataset compared to the current approaches. In addition, our method detects anomalies in datasets where current approaches fail. Code available at <a href="https://github.com/KostadinovShalon/oln-ssos">https://github.com/KostadinovShalon/oln-ssos</a>.</p>
+    <main id="content" class="main-content" role="main">
+      <p><img class="enlargeable" src="images/architecture.jpg" /></p>
 
-<!--<h2 id="video">Video</h2>-->
-<!--<div class="videoWrapper">-->
-<!-- <iframe width="560" height="315" src="https://youtu.be/1ck25jJdw7A" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen=""></iframe>-->
-<!--</div>-->
+<h2 id="abstract">Abstract</h2>
+
+<p>Object detection is a pivotal task in computer vision that has received significant attention in previous years. Nonetheless, the capability of a detector to localise objects out of the training distribution remains unexplored. Whilst recent approaches in object-level out-of-distribution (OoD) detection heavily rely on class labels, such approaches contradict truly open-world scenarios where the class distribution is often unknown. In this context, anomaly detection focuses on detecting unseen instances rather than classifying detections as OoD. This work aims to bridge this gap by leveraging an open-world object detector and an OoD detector via virtual outlier synthesis. This is achieved by using the detector backbone features to first learn object pseudo-classes via self-supervision. These pseudo-classes serve as the basis for class-conditional virtual outlier sampling of anomalous features that are classified by an OoD head. Our approach empowers our overall object detector architecture to learn anomaly-aware feature representations without relying on class labels, hence enabling truly open-world object anomaly detection. Empirical validation of our approach demonstrates its effectiveness across diverse datasets encompassing various imaging modalities (visible, infrared, and X-ray). Moreover, our method establishes state-of-the-art performance on object-level anomaly detection, achieving an average recall score improvement of over 5.4% for natural images and 23.5% for a security X-ray dataset compared to the current approaches. In addition, our method detects anomalies in datasets where current approaches fail.</p>
+
+<h2 id="results">Results</h2>
+
+<p><img src="/images/voc_qual.jpg" alt="voc" /></p>
+
+<p><img src="/images/bdd_qual.jpg" alt="bdd" /></p>
+
+<p><img src="/images/dbf6_qual.jpg" alt="dbf6" /></p>
+
+<p><img src="/images/ltd_qual.jpg" alt="ltd" /></p>
 
 <h2 id="citation">Citation</h2>
 
@@ -161,11 +170,14 @@
 }
 </code></pre></div></div>
 
-  
-            
-          
-    </div>
-    
-  </body>
 
+
+      <footer class="site-footer">
+        
+          <span class="site-footer-owner"><a href="https://github.com/KostadinovShalon/oln-ssos">oln-ssos</a> is maintained by <a href="https://github.com/KostadinovShalon">KostadinovShalon</a>.</span>
+        
+        <span class="site-footer-credits">This page was generated by <a href="https://pages.github.com">GitHub Pages</a>.</span>
+      </footer>
+    </main>
+  </body>
 </html>
