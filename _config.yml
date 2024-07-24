@@ -22,7 +22,7 @@ title: "Towards Open-World Object-based Anomaly Detection via Self-Supervised Ou
 email: your-email@example.com
 description: >- # this means to ignore newlines until "baseurl:"
   Accepted at ECCV 2024
-baseurl: "" # the subpath of your site, e.g. /blog
+# baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
 authors:
   - link: https://kostadinovshalon.github.io
