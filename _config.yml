@@ -48,10 +48,10 @@ links:
 #    link: https://youtu.be/1ck25jJdw7A
 #    title: Video
 # Build settings
-# remote_theme: pages-themes/cayman@v0.2.0
-# plugins:
-#   - jekyll-feed
-#   - jekyll-remote-theme
+remote_theme: pages-themes/cayman@v0.2.0
+plugins:
+  - jekyll-feed
+  - jekyll-remote-theme
 theme: jekyll-theme-cayman
 
 # Exclude from processing.
