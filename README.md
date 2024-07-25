@@ -5,11 +5,10 @@
 
 ## Introduction
 
-While modern techniques for anomaly detection are focused on Out-of-Distribution classification ir uncertainty estimation in semantic segmentation, little
-attention has been oriented towards anomaly object detection. In this regard, a major difficulty is to both detect unseen objects and classify them as anomalies. 
-For this reason, we combine the power of a class-agnostic object detector, namely [OLN](https://arxiv.org/abs/2108.06753), with the [VOS](https://arxiv.org/abs/2202.01197) OoD detector to
+While modern techniques for anomaly detection are focused on Out-of-Distribution classification or uncertainty estimation in semantic segmentation, little
+attention has been oriented towards object-based anomaly detection. In this regard, a major difficulty is to both detect unseen objects and classify them as anomalies. 
+For this reason, we combine the power of a class-agnostic object detector, namely [OLN](https://arxiv.org/abs/2108.06753), with the [VOS](https://arxiv.org/abs/2202.01197) OoD framework to
 perform anomaly detection on an object level. We dub this method **OLN-SSOS**.
-
 
 ## Installation
 
