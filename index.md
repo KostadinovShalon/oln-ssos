@@ -9,13 +9,141 @@ Object detection is a pivotal task in computer vision that has received signific
 
 ## Results
 
-![voc](images/voc_qual.jpg)
+<div class="slideshow-container">
+  <div class="mySlides fade">
+    <div class="numbertext">1 / 4</div>
+    <div class="card">
+        <a href="images/voc_qual.jpg" target="_blank"><img class='card-img' src="images/voc_qual.jpg"/></a>
+        <div class="card-container">
+            <h4>VOC/COCO</h4>
+        </div>
+    </div>
+  </div>
 
-![bdd](images/bdd_qual.jpg)
+  <div class="mySlides fade">
+    <div class="numbertext">2 / 4</div>
+    <div class="card">
+        <a href="images/bdd_qual.jpg" target="_blank"><img class='card-img' src="images/bdd_qual.jpg"/></a>
+        <div class="card-container">
+            <h4>BDD/COCO</h4>
+        </div>
+    </div>
+  </div>
 
-![dbf6](images/dbf6_qual.jpg)
+<div class="mySlides fade">
+    <div class="numbertext">3 / 4</div>
+    <div class="card">
+        <a href="images/dbf6_qual.jpg" target="_blank"><img class='card-img' src="images/dbf6_qual.jpg"/></a>
+        <div class="card-container">
+            <h4>DBF6</h4>
+        </div>
+    </div>
+  </div>
 
-![ltd](images/ltd_qual.jpg)
+<div class="mySlides fade">
+    <div class="numbertext">4 / 4</div>
+    <div class="card">
+        <a href="images/ltd_qual.jpg" target="_blank"><img class='card-img' src="images/ltd_qual.jpg"/></a>
+        <div class="card-container">
+            <h4>LTDImaging</h4>
+        </div>
+    </div>
+  </div>
+
+  <!-- Next and previous buttons -->
+  <a class="prev" onclick="plusSlides(-1)">&#10094;</a>
+  <a class="next" onclick="plusSlides(1)">&#10095;</a>
+</div>
+<br>
+
+<!-- The dots/circles -->
+<div style="text-align:center">
+  <span class="dot" onclick="currentSlide(1)"></span>
+  <span class="dot" onclick="currentSlide(2)"></span>
+  <span class="dot" onclick="currentSlide(3)"></span>
+  <span class="dot" onclick="currentSlide(4)"></span>
+</div>
+
+[//]: # (<div class="row">)
+
+[//]: # (    <ul class="list-inline">)
+
+[//]: # (        <li class="element-list-inline">)
+
+[//]: # (            <div class="card">)
+
+[//]: # (                <a href="images/voc_qual.jpg" target="_blank"><img src="images/voc_qual.jpg"/></a>)
+
+[//]: # (                <div class="card-container">)
+
+[//]: # (                    <h4>VOC/COCO</h4>)
+
+[//]: # (                </div>)
+
+[//]: # (            </div>)
+
+[//]: # (        </li>)
+
+[//]: # (        <li class="element-list-inline">)
+
+[//]: # (                <div class="card">)
+
+[//]: # (                <a href="images/bdd_qual.jpg" target="_blank"><img src="images/bdd_qual.jpg"/></a>)
+
+[//]: # (                <div class="card-container">)
+
+[//]: # (                    <h4>BDD/COCO</h4>)
+
+[//]: # (                </div>)
+
+[//]: # (            </div>)
+
+[//]: # (        </li>)
+
+[//]: # (    </ul>)
+
+[//]: # (</div>)
+
+[//]: # ()
+[//]: # (<div class="row">)
+
+[//]: # (    <ul class="list-inline">)
+
+[//]: # (        <li class="element-list-inline">)
+
+[//]: # (            <div class="card">)
+
+[//]: # (                <a href="images/dbf6_qual.jpg" target="_blank"><img src="images/dbf6_qual.jpg"/></a>)
+
+[//]: # (                <div class="card-container">)
+
+[//]: # (                    <h4>DBF6</h4>)
+
+[//]: # (                </div>)
+
+[//]: # (            </div>)
+
+[//]: # (        </li>)
+
+[//]: # (        <li class="element-list-inline">)
+
+[//]: # (                <div class="card">)
+
+[//]: # (                <a href="images/ltd_qual.jpg" target="_blank"><img src="images/ltd_qual.jpg"/></a>)
+
+[//]: # (                <div class="card-container">)
+
+[//]: # (                    <h4>LTDImaging</h4>)
+
+[//]: # (                </div>)
+
+[//]: # (            </div>)
+
+[//]: # (        </li>)
+
+[//]: # (    </ul>)
+
+[//]: # (</div>)
 
 ## Citation
     {% raw %}
