@@ -24,6 +24,7 @@ description: >- # this means to ignore newlines until "baseurl:"
   Accepted at ECCV 2024
 # baseurl: "" # the subpath of your site, e.g. /blog
 url: "" # the base hostname & protocol for your site, e.g. http://example.com
+collapsed-authors-list: B.K.S. Isaac-Medina, Y.F.A. Gaus, N. Bhowmik, T.P. Breckon
 authors:
   - link: https://kostadinovshalon.github.io
     name: Brian K. S. Isaac-Medina
@@ -35,7 +36,7 @@ authors:
     name: Neelanjan Bhowmik
     institution: Durham University
   - link: https://breckon.org/breckon
-    name: Toby Breckon
+    name: Toby P. Breckon
     institution: Durham University
 links:
   - img: images/paper-icon.png

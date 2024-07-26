@@ -18,29 +18,34 @@
 
    {% assign authors = site.authors %}
    {% assign links = site.links %}
-      <h1 class="project-name">{{ page.title | default: site.title | default: site.github.repository_name }}</h1>
-      <h2 class="project-tagline">{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
+      <h1 class="project-name" id="project-name">{{ page.title | default: site.title | default: site.github.repository_name }}<small id="collapsed-authors">, {{ site.collapsed-authors-list }}</small></h1>
+      <h2 class="project-tagline" id="project-tagline">{{ page.description | default: site.description | default: site.github.project_tagline }}</h2>
         {% if authors.size > 0 %}
-            <div class="row">
+            <div class="row" id="authors">
                     <ul class="list-inline">
                         {% for author in authors %}
                             <li class="element-list-inline">
                                 <a class='author-name' target="_blank" href="{{author.link}}"><h3>{{author.name}}</h3></a>
-                                {{author.institution}}
+                                <p>{{author.institution}}</p>
                             </li>
                         {% endfor %}
                     </ul>
             </div>
+
+            <div id="small-authors">
+                {% for author in authors %}
+                    <a class='small-author-name' target="_blank" href="{{author.link}}">{{author.name}}</a>{% if forloop.last == false %},{% endif %}
+                {% endfor %}
+            </div>
             {% endif %}
 
             {% if links.size > 0 %}
-            <div class="row">
+            <div class="row" id="links">
                 <ul class="list-inline">
                         {% for link in links %}
                             <li class="element-list-inline links">
                                 <a href="{{link.link}}" target="_blank">
-                                    <image src="{{link.img}}" height="60px"/>
-                                    <br>
+                                    <img src="{{link.img}}">
                                     <h4><strong>{{link.title}}</strong></h4>
                                 </a>
                             </li>

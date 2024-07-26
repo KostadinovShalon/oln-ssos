@@ -4,7 +4,9 @@
 
 div.row ul {
   display: flex;
-  list-style: none; }
+  list-style: none;
+  margin: 0;
+  padding-inline-start: 0; }
 
 div.row li {
   margin: 0 10px; }
@@ -12,21 +14,8 @@ div.row li {
 .project-tagline {
   margin-bottom: 0; }
 
-.page-header {
-  padding: 3rem 2rem;
-  background-image: url(/oln-ssos/images/banner1.jpg);
-  box-shadow: inset 0 0 0 2000px rgba(104, 36, 109, 0.9); }
-
-.links {
-  margin: 20px 0; }
-
-img.enlargeable {
-  transition: transform 0.25s ease; }
-
-img.enlargeable:hover {
-  -webkit-transform: scale(1.5);
-  /* or some other value */
-  transform: scale(1.5); }
+.project-name {
+  transition: 0.3s; }
 
 .card {
   /* Add shadows to create the "card" effect */
@@ -46,6 +35,16 @@ img.enlargeable:hover {
 .card-img {
   height: 600px;
   padding: 20px; }
+
+@media screen and (max-width: 48em) {
+  #content {
+    margin-top: 24rem; } }
+@media screen and (min-width: 48em) and (max-width: 64em) {
+  #content {
+    margin-top: 31rem; } }
+@media screen and (min-width: 64em) {
+  #content {
+    margin-top: 29rem; } }
 
 .main-content h2 {
   color: #68246d;
@@ -138,5 +137,114 @@ a.author-name {
     opacity: .4; }
   to {
     opacity: 1; } }
+/* Collapsible nav-bar */
+header.page-header {
+  overflow: hidden;
+  transition: 0.3s;
+  width: 100%;
+  top: 0;
+  position: fixed;
+  padding: 20px 2.5rem;
+  background-image: url(/oln-ssos/images/banner1.jpg);
+  box-shadow: inset 0 0 0 2000px rgba(104, 36, 109, 0.9);
+  z-index: 1; }
+  @media screen and (max-width: 48em) {
+    header.page-header {
+      height: 23rem;
+      max-height: 23rem; } }
+  @media screen and (min-width: 48em) and (max-width: 64em) {
+    header.page-header {
+      height: 30rem;
+      max-height: 30rem; } }
+  @media screen and (min-width: 64em) {
+    header.page-header {
+      height: 28rem;
+      max-height: 28rem; } }
+
+.links a img {
+  height: 60px; }
+  @media screen and (max-width: 48em) {
+    .links a img {
+      height: 40px; } }
+
+.links h4 {
+  color: white;
+  margin: 0px; }
+
+#authors {
+  transition: 0.4s; }
+  @media screen and (max-width: 48em) {
+    #authors {
+      display: none; } }
+  @media screen and (min-width: 48em) and (max-width: 64em) {
+    #authors {
+      display: flex; } }
+  @media screen and (min-width: 64em) {
+    #authors {
+      display: flex; } }
+
+#small-authors {
+  transition: 0.4s; }
+  @media screen and (max-width: 48em) {
+    #small-authors {
+      display: block; } }
+  @media screen and (min-width: 48em) and (max-width: 64em) {
+    #small-authors {
+      display: none; } }
+  @media screen and (min-width: 64em) {
+    #small-authors {
+      display: none; } }
+
+.small-author-name {
+  color: white;
+  font-size: 0.75rem;
+  text-decoration: underline; }
+
+#authors h3 {
+  text-decoration: underline; }
+  @media screen and (max-width: 48em) {
+    #authors h3 {
+      font-size: 0.55rem; } }
+  @media screen and (min-width: 48em) and (max-width: 64em) {
+    #authors h3 {
+      font-size: 1.15rem; } }
+  @media screen and (min-width: 64em) {
+    #authors h3 {
+      font-size: 1.15rem; } }
+
+#authors p {
+  white-space: nowrap;
+  overflow: hidden; }
+  @media screen and (max-width: 48em) {
+    #authors p {
+      font-size: 0.55rem; } }
+
+#links {
+  transition: 0.4s;
+  margin-top: 10px; }
+
+#collapsed-authors {
+  opacity: 0;
+  font-size: small;
+  transition: 0.3s;
+  visibility: hidden;
+  display: none;
+  font-weight: normal; }
+  @media screen and (max-width: 48em) {
+    #collapsed-authors {
+      font-size: 0.65rem; } }
+
+.project-name {
+  margin-top: 0;
+  margin-bottom: 0.1rem; }
+  @media screen and (max-width: 48em) {
+    .project-name {
+      font-size: 1.33rem; } }
+  @media screen and (min-width: 48em) and (max-width: 64em) {
+    .project-name {
+      font-size: 2.25rem; } }
+  @media screen and (min-width: 64em) {
+    .project-name {
+      font-size: 3.25rem; } }
 
 /*# sourceMappingURL=custom-style.css.map */

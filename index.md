@@ -1,7 +1,7 @@
 ---
 layout: default
 ---
-<img class='enlargeable' src="images/architecture.jpg"/>
+<a href="images/architecture.jpg" target="_blank"><img src="images/architecture.jpg"/></a>
 
 ## Abstract
 
