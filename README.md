@@ -42,31 +42,7 @@ Some [example scripts](scripts/) are available. The script will show the COCO me
 
 ## Datasets
 
-Three datasets have been tested: DB6, VOC(ID)/COCO(OoD) and the LTD Imaging dataset. These datasets should be under the ``data`` directory.
-
-#### DB6
-The db6 contains six classes: firearm, firearm part, knife, camera, ceramic knife and laptop. For this study, the 
-firearm and firearm parts classes are considered anomalies while the other four classes are normal. The following 
-annotation files are provided:
-
-|          Filename           | Dataset | Partition |                       Comments                        |                      Location                       |
-|:---------------------------:|:-------:|:---------:|:-----------------------------------------------------:|:---------------------------------------------------:|
-| train_db6_no_firearms.json  |   db6   |   train   | Train partition without images that contain firearms  | [link](annotations/db6/train_db6_no_firearms.json)  |
-|  test_db6_no_firearms.json  |   db6   |   test    |  Test partition without images that contain firearms  |  [link](annotations/db6/test_db6_no_firearms.json)  |
-| test_db6_only_firearms.json |   db6   |   test    | Test partition with images that only contain firearms | [link](annotations/db6/test_db6_only_firearms.json) |
-
-Data Structure:
-```
-data
-├── db6
-│   ├── annotations
-│   │   ├── test_db6_no_firearms.json
-│   │   ├── test_db6_only_firearms.json
-│   │   ├── train_db6_no_firearms.json
-│   ├── images
-│   │   ├── ...
-
-```
+Three datasets have been tested: DB6 (not public), VOC(ID)/COCO(OoD) and the LTD Imaging dataset. These datasets should be under the ``data`` directory.
 
 #### VOC(ID)/COCO(OoD)
 We follow the same methodology in VOS for training the detector in the PASCAL VOC dataset and test in a COCO dataset partition
